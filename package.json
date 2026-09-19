@@ -1,0 +1,45 @@
+{
+  "name": "hushwater",
+  "version": "0.1.0",
+  "description": "Hushwater — a cozy online survival hangout for up to four friends.",
+  "main": "main.js",
+  "author": "Hushwater",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis",
+    "publish": "electron-builder --win nsis --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.hushwater.game",
+    "productName": "Hushwater",
+    "files": ["main.js", "preload.js", "app/**/*"],
+    "asar": true,
+    "directories": {"output": "dist"},
+    "win": {
+      "target": [{"target": "nsis", "arch": ["x64"]}],
+      "artifactName": "Hushwater-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Hushwater",
+      "differentialPackage": true
+    },
+    "publish": [{
+      "provider": "github",
+      "owner": "ehutch06",
+      "repo": "hushwater"
+    }]
+  }
+}
