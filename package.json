@@ -1,6 +1,6 @@
 {
   "name": "hushwater",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hushwater — a cozy online survival hangout for up to four friends.",
   "main": "main.js",
   "author": "Hushwater",
@@ -39,7 +39,8 @@
     "publish": [{
       "provider": "github",
       "owner": "ehutch06",
-      "repo": "hushwater"
+      "repo": "hushwater",
+      "releaseType": "release"
     }]
   }
 }
