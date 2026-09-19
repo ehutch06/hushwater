@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out Hushwater
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -26,6 +28,20 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Create version tag if needed
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = "v$version"
+          git fetch --tags
+          $existing = git tag -l $tag
+          if (-not $existing) {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag $tag
+            git push origin $tag
+          }
 
       - name: Build and publish Windows installer
         env:
