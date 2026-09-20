@@ -83,6 +83,13 @@ jobs:
           p.write_text(s.replace(old, new))
           PY
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoops-v03-source-snapshot
+          path: ${{ env.PROJECT_DIR }}
+          if-no-files-found: error
+          compression-level: 6
+
       - name: Download official Godot 4.7.2 editor
         shell: bash
         run: |
