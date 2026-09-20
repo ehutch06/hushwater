@@ -1,4 +1,4 @@
-name: Hoops Legacy Windows Validated Build
+name: Hoops Legacy v0.3 Windows Validated Build
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Reconstruct Hoops Legacy source
+      - name: Reconstruct validated v0.2 source
         shell: bash
         run: |
           set -euxo pipefail
@@ -29,7 +29,7 @@ jobs:
           test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Apply validated gameplay startup fixes
+      - name: Apply validated v0.2 startup fixes
         shell: bash
         run: |
           python3 - <<'PY'
@@ -49,10 +49,23 @@ jobs:
           }
           for old, new in replacements.items():
               if old not in s:
-                  raise SystemExit(f"Missing expected source line: {old}")
+                  raise SystemExit(f"Missing expected v0.2 source line: {old}")
               s = s.replace(old, new)
           p.write_text(s)
           PY
+
+      - name: Apply v0.3 gameplay and presentation patch
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat hoops_diag/v03_patch_b64_00.txt hoops_diag/v03_patch_b64_01.txt hoops_diag/v03_patch_b64_02.txt hoops_diag/v03_patch_b64_03.txt hoops_diag/v03_patch_b64_04.txt hoops_diag/v03_patch_b64_05.txt hoops_diag/v03_patch_b64_06.txt hoops_diag/v03_patch_b64_07.txt hoops_diag/v03_patch_b64_08.txt hoops_diag/v03_patch_b64_09.txt hoops_diag/v03_patch_b64_10.txt hoops_diag/v03_patch_b64_11.txt hoops_diag/v03_patch_b64_12.txt hoops_diag/v03_patch_b64_13.txt hoops_diag/v03_patch_b64_14.txt hoops_diag/v03_patch_b64_15.txt hoops_diag/v03_patch_b64_16.txt > hoops_diag/v03.patch.b64
+          base64 -d hoops_diag/v03.patch.b64 > hoops_diag/v03.patch
+          echo "ac3f128eb751c9d5336329807cd18afc7a1b0249ca21eac716fbdbeb8082dfe1  hoops_diag/v03.patch" | sha256sum -c -
+          cd "$PROJECT_DIR"
+          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v03.patch"
+          grep -q 'GAMEPLAY SETTINGS' scripts/main.gd
+          grep -q 'func update_finish_action' scripts/main.gd
+          grep -q 'func camera_preset_name' scripts/main.gd
 
       - name: Download official Godot 4.7.2 editor
         shell: bash
@@ -68,18 +81,18 @@ jobs:
         run: |
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor.log"
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/editor.log"
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v03.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v03.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v03.log"
             exit 1
           fi
           set +e
-          timeout 10s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
+          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v03.log"
           status=$?
           set -e
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v03.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v03.log"
             exit 1
           fi
 
@@ -98,7 +111,6 @@ jobs:
             cp -a /tmp/godot-templates/. "$TEMPLATE_DIR/"
           fi
           test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
-          ls -lh "$TEMPLATE_DIR/windows_release_x86_64.exe"
 
       - name: Configure Windows x64 export
         shell: bash
@@ -136,11 +148,11 @@ jobs:
           application/icon=""
           application/console_wrapper_icon=""
           application/icon_interpolation=4
-          application/file_version="0.2.6.0"
-          application/product_version="0.2.6.0"
+          application/file_version="0.3.0.0"
+          application/product_version="0.3.0.0"
           application/company_name=""
           application/product_name="Hoops Legacy"
-          application/file_description="Hoops Legacy Basketball Career Simulator"
+          application/file_description="Hoops Legacy v0.3 Gameplay and Camera Playtest"
           application/copyright=""
           application/trademarks=""
           EOF
@@ -151,23 +163,35 @@ jobs:
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           BUILD_DIR="$GITHUB_WORKSPACE/hoops_diag/windows-build"
+          rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export.log"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v03.log"
           test -s "$BUILD_DIR/HoopsLegacy.exe"
           test -s "$BUILD_DIR/HoopsLegacy.pck"
           file "$BUILD_DIR/HoopsLegacy.exe"
           sha256sum "$BUILD_DIR/HoopsLegacy.exe" "$BUILD_DIR/HoopsLegacy.pck" > "$BUILD_DIR/SHA256SUMS.txt"
           cat > "$BUILD_DIR/START_HERE.txt" <<'EOF'
-          HOOPS LEGACY - VALIDATED WINDOWS x64 PLAYTEST
+          HOOPS LEGACY v0.3 - GAMEPLAY + CAMERA PLAYTEST
 
           Double-click HoopsLegacy.exe.
-          Keep HoopsLegacy.exe and HoopsLegacy.pck together in this folder.
-          This build was exported with the official Godot 4.7.2 Windows x86_64 release template.
+          Keep HoopsLegacy.exe and HoopsLegacy.pck together.
+
+          New in this build:
+          - 2K / High / Broadcast / Drive camera presets
+          - zoom and height camera settings
+          - camera motion and action-shake toggles
+          - shot feedback toggle
+          - smoother analog acceleration, braking, first-step burst and plants
+          - upgraded defensive stance and on-ball protect/size-up movement
+          - smoother dribble ball paths and body reactions
+          - improved footwork, arm swing, shot poses and finish animations
+          - player-lock ring and contact shadows
+          - more active CPU spacing, cuts and passing decisions
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-windows-candidate
+          name: hoops-v03-windows-candidate
           path: hoops_diag/windows-build/
           if-no-files-found: error
           compression-level: 6
@@ -179,7 +203,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hoops-windows-candidate
+          name: hoops-v03-windows-candidate
           path: build
 
       - name: Verify and launch actual Windows executable
@@ -188,27 +212,27 @@ jobs:
           Get-ChildItem build
           if (-not (Test-Path "build\HoopsLegacy.exe")) { throw "HoopsLegacy.exe missing" }
           if (-not (Test-Path "build\HoopsLegacy.pck")) { throw "HoopsLegacy.pck missing" }
-          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy.exe" -ArgumentList "--headless","--quit-after","120","--log-file","$PWD\build\windows-runtime.log" -Wait -PassThru
+          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v03.log" -Wait -PassThru
           Write-Host "Windows process exit code: $($proc.ExitCode)"
           if ($proc.ExitCode -ne 0) {
-            if (Test-Path "build\windows-runtime.log") { Get-Content "build\windows-runtime.log" }
+            if (Test-Path "build\windows-runtime-v03.log") { Get-Content "build\windows-runtime-v03.log" }
             throw "Windows executable returned non-zero exit code."
           }
-          if (Test-Path "build\windows-runtime.log") {
-            Get-Content "build\windows-runtime.log"
-            $bad = Select-String -Path "build\windows-runtime.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
+          if (Test-Path "build\windows-runtime-v03.log") {
+            Get-Content "build\windows-runtime-v03.log"
+            $bad = Select-String -Path "build\windows-runtime-v03.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
             if ($bad) { throw "Godot reported an error during the Windows smoke test." }
           }
 
       - name: Package validated playtest
         shell: pwsh
         run: |
-          Remove-Item "build\windows-runtime.log" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.2.6-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
+          Remove-Item "build\windows-runtime-v03.log" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.3.0-Gameplay-Camera-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: HoopsLegacy-v0.2.6-Windows-x64-VALIDATED
-          path: HoopsLegacy-v0.2.6-Windows-x64-VALIDATED.zip
+          name: HoopsLegacy-v0.3.0-Gameplay-Camera-Windows-x64-VALIDATED
+          path: HoopsLegacy-v0.3.0-Gameplay-Camera-Windows-x64-VALIDATED.zip
           if-no-files-found: error
           compression-level: 0
