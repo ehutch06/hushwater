@@ -58,8 +58,9 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          cat hoops_diag/v03_patch_b64_00.txt hoops_diag/v03_patch_b64_01.txt hoops_diag/v03_patch_b64_02.txt hoops_diag/v03_patch_b64_03.txt hoops_diag/v03_patch_b64_04.txt hoops_diag/v03_patch_b64_05.txt hoops_diag/v03_patch_b64_06.txt hoops_diag/v03_patch_b64_07.txt hoops_diag/v03_patch_b64_08.txt hoops_diag/v03_patch_b64_09.txt hoops_diag/v03_patch_b64_10.txt hoops_diag/v03_patch_b64_11.txt hoops_diag/v03_patch_b64_12.txt hoops_diag/v03_patch_b64_13.txt hoops_diag/v03_patch_b64_14.txt hoops_diag/v03_patch_b64_15.txt hoops_diag/v03_patch_b64_16.txt > hoops_diag/v03.patch.b64
-          base64 -d hoops_diag/v03.patch.b64 > hoops_diag/v03.patch
+          echo "8d03b577e1a42c1463df4dd48ff23c7077ee0c7317bfb583eabe08f6352dbc37  hoops_diag/v03_patch_gz_b64.txt" | sha256sum -c -
+          base64 -d hoops_diag/v03_patch_gz_b64.txt > hoops_diag/v03.patch.gz
+          gzip -dc hoops_diag/v03.patch.gz > hoops_diag/v03.patch
           echo "ac3f128eb751c9d5336329807cd18afc7a1b0249ca21eac716fbdbeb8082dfe1  hoops_diag/v03.patch" | sha256sum -c -
           cd "$PROJECT_DIR"
           patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v03.patch"
