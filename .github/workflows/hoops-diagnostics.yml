@@ -14,15 +14,21 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
       - name: Reconstruct Hoops Legacy source
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p hoops_diag/work
-          base64 -d hoops_diag/source.zip.b64 > hoops_diag/source.zip
+          cat hoops_diag/chunk00.txt hoops_diag/chunk01.txt hoops_diag/chunk02.txt hoops_diag/chunk03.txt hoops_diag/chunk04.txt > hoops_diag/source.full.b64
+          base64 -d hoops_diag/source.full.b64 > hoops_diag/source.zip
+          unzip -t hoops_diag/source.zip
           unzip -q hoops_diag/source.zip -d hoops_diag/work
           PROJECT_DIR="$(find hoops_diag/work -maxdepth 2 -name project.godot -printf '%h\n' | head -1)"
+          test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "PROJECT_DIR=$PROJECT_DIR"
+
       - name: Download official Godot 4.7.2 editor
         shell: bash
         run: |
@@ -31,21 +37,31 @@ jobs:
           unzip -q /tmp/godot.zip -d /tmp/godot
           chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --version
+
       - name: Import and parser check
         shell: bash
         run: |
-          set -euxo pipefail
+          set +e
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor.log"
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor.log" 2>&1 | tee "$GITHUB_WORKSPACE/hoops_diag/editor-console.log"
+          status=${PIPESTATUS[0]}
+          grep -nEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/editor.log" || true
+          exit $status
+
       - name: Headless launch smoke test
         shell: bash
         run: |
           set +e
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          timeout 10s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
-          status=$?
+          timeout 10s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime.log" 2>&1 | tee "$GITHUB_WORKSPACE/hoops_diag/runtime-console.log"
+          status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; then cat "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; exit 1; fi
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
+            exit 1
+          fi
+          echo "Smoke test healthy (timeout means the game stayed running)."
+
       - name: Create pack preset
         shell: bash
         run: |
@@ -61,12 +77,14 @@ jobs:
           exclude_filter=""
           export_path="HoopsLegacy.pck"
           script_export_mode=2
+
           [preset.0.options]
           binary_format/embed_pck=false
           texture_format/s3tc_bptc=true
           texture_format/etc2_astc=false
           shader_baker/enabled=false
           EOF
+
       - name: Export compiled PCK
         shell: bash
         run: |
@@ -74,7 +92,10 @@ jobs:
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           mkdir -p "$GITHUB_WORKSPACE/hoops_diag/artifact"
           "$GODOT" --headless --path "$PROJECT_DIR" --export-pack "Windows Desktop" "$GITHUB_WORKSPACE/hoops_diag/artifact/HoopsLegacy.pck" --log-file "$GITHUB_WORKSPACE/hoops_diag/export.log"
+          test -s "$GITHUB_WORKSPACE/hoops_diag/artifact/HoopsLegacy.pck"
           cp "$GITHUB_WORKSPACE/hoops_diag/"*.log "$GITHUB_WORKSPACE/hoops_diag/artifact/" || true
+          ls -lh "$GITHUB_WORKSPACE/hoops_diag/artifact/HoopsLegacy.pck"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
