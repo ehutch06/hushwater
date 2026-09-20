@@ -1,4 +1,4 @@
-name: Hoops Legacy Validate + Pack
+name: Hoops Legacy Windows Validated Build
 
 on:
   push:
@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate-and-pack:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
@@ -19,6 +19,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
+          rm -rf hoops_diag/work
           mkdir -p hoops_diag/work
           cat hoops_diag/chunk00.txt hoops_diag/chunk01.txt hoops_diag/chunk02.txt hoops_diag/chunk03.txt hoops_diag/chunk04.txt > hoops_diag/source.full.b64
           base64 -d hoops_diag/source.full.b64 > hoops_diag/source.zip
@@ -28,7 +29,7 @@ jobs:
           test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      - name: Apply gameplay startup fixes
+      - name: Apply validated gameplay startup fixes
         shell: bash
         run: |
           python3 - <<'PY'
@@ -62,38 +63,49 @@ jobs:
           chmod +x /tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           /tmp/godot/Godot_v4.7.2-stable_linux.x86_64 --version
 
-      - name: Import and parser check
+      - name: Parser and runtime smoke test
         shell: bash
         run: |
-          set +e
+          set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor.log" 2>&1 | tee "$GITHUB_WORKSPACE/hoops_diag/editor-console.log"
-          status=${PIPESTATUS[0]}
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor.log"
           if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor.log"; then
             cat "$GITHUB_WORKSPACE/hoops_diag/editor.log"
             exit 1
           fi
-          exit $status
-
-      - name: Headless launch smoke test
-        shell: bash
-        run: |
           set +e
-          GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          timeout 10s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime.log" 2>&1 | tee "$GITHUB_WORKSPACE/hoops_diag/runtime-console.log"
-          status=${PIPESTATUS[0]}
+          timeout 10s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
+          status=$?
+          set -e
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
           if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; then
             cat "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
             exit 1
           fi
-          echo "Smoke test healthy."
 
-      - name: Create pack preset
+      - name: Install official Godot 4.7.2 export templates
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -fL --retry 3 -o /tmp/templates.tpz https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+          mkdir -p /tmp/godot-templates
+          unzip -q /tmp/templates.tpz -d /tmp/godot-templates
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.7.2.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          if [ -d /tmp/godot-templates/templates ]; then
+            cp -a /tmp/godot-templates/templates/. "$TEMPLATE_DIR/"
+          else
+            cp -a /tmp/godot-templates/. "$TEMPLATE_DIR/"
+          fi
+          test -f "$TEMPLATE_DIR/windows_release_x86_64.exe"
+          ls -lh "$TEMPLATE_DIR/windows_release_x86_64.exe"
+
+      - name: Configure Windows x64 export
         shell: bash
         run: |
           cat > "$PROJECT_DIR/export_presets.cfg" <<'EOF'
           [preset.0]
+
           name="Windows Desktop"
           platform="Windows Desktop"
           runnable=true
@@ -102,32 +114,101 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="HoopsLegacy.pck"
+          export_path="build/HoopsLegacy.exe"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
           script_export_mode=2
 
           [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          debug/export_console_wrapper=0
           binary_format/embed_pck=false
           texture_format/s3tc_bptc=true
           texture_format/etc2_astc=false
           shader_baker/enabled=false
+          binary_format/architecture="x86_64"
+          codesign/enable=false
+          application/modify_resources=true
+          application/icon=""
+          application/console_wrapper_icon=""
+          application/icon_interpolation=4
+          application/file_version="0.2.6.0"
+          application/product_version="0.2.6.0"
+          application/company_name=""
+          application/product_name="Hoops Legacy"
+          application/file_description="Hoops Legacy Basketball Career Simulator"
+          application/copyright=""
+          application/trademarks=""
           EOF
 
-      - name: Export compiled PCK
+      - name: Export real Windows x64 release
         shell: bash
         run: |
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          mkdir -p "$GITHUB_WORKSPACE/hoops_diag/artifact"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-pack "Windows Desktop" "$GITHUB_WORKSPACE/hoops_diag/artifact/HoopsLegacy.pck" --log-file "$GITHUB_WORKSPACE/hoops_diag/export.log"
-          test -s "$GITHUB_WORKSPACE/hoops_diag/artifact/HoopsLegacy.pck"
-          cp "$GITHUB_WORKSPACE/hoops_diag/"*.log "$GITHUB_WORKSPACE/hoops_diag/artifact/" || true
-          ls -lh "$GITHUB_WORKSPACE/hoops_diag/artifact/HoopsLegacy.pck"
+          BUILD_DIR="$GITHUB_WORKSPACE/hoops_diag/windows-build"
+          mkdir -p "$BUILD_DIR"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export.log"
+          test -s "$BUILD_DIR/HoopsLegacy.exe"
+          test -s "$BUILD_DIR/HoopsLegacy.pck"
+          file "$BUILD_DIR/HoopsLegacy.exe"
+          sha256sum "$BUILD_DIR/HoopsLegacy.exe" "$BUILD_DIR/HoopsLegacy.pck" > "$BUILD_DIR/SHA256SUMS.txt"
+          cat > "$BUILD_DIR/START_HERE.txt" <<'EOF'
+          HOOPS LEGACY - VALIDATED WINDOWS x64 PLAYTEST
+
+          Double-click HoopsLegacy.exe.
+          Keep HoopsLegacy.exe and HoopsLegacy.pck together in this folder.
+          This build was exported with the official Godot 4.7.2 Windows x86_64 release template.
+          EOF
 
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: hoops-legacy-validated-pack
-          path: |
-            hoops_diag/artifact/
-            hoops_diag/*.log
-          if-no-files-found: warn
+          name: hoops-windows-candidate
+          path: hoops_diag/windows-build/
+          if-no-files-found: error
+          compression-level: 6
+
+  windows-smoke-test:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: hoops-windows-candidate
+          path: build
+
+      - name: Verify and launch actual Windows executable
+        shell: pwsh
+        run: |
+          Get-ChildItem build
+          if (-not (Test-Path "build\HoopsLegacy.exe")) { throw "HoopsLegacy.exe missing" }
+          if (-not (Test-Path "build\HoopsLegacy.pck")) { throw "HoopsLegacy.pck missing" }
+          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy.exe" -ArgumentList "--headless","--quit-after","120","--log-file","$PWD\build\windows-runtime.log" -Wait -PassThru
+          Write-Host "Windows process exit code: $($proc.ExitCode)"
+          if ($proc.ExitCode -ne 0) {
+            if (Test-Path "build\windows-runtime.log") { Get-Content "build\windows-runtime.log" }
+            throw "Windows executable returned non-zero exit code."
+          }
+          if (Test-Path "build\windows-runtime.log") {
+            Get-Content "build\windows-runtime.log"
+            $bad = Select-String -Path "build\windows-runtime.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
+            if ($bad) { throw "Godot reported an error during the Windows smoke test." }
+          }
+
+      - name: Package validated playtest
+        shell: pwsh
+        run: |
+          Remove-Item "build\windows-runtime.log" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.2.6-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HoopsLegacy-v0.2.6-Windows-x64-VALIDATED
+          path: HoopsLegacy-v0.2.6-Windows-x64-VALIDATED.zip
+          if-no-files-found: error
+          compression-level: 0
