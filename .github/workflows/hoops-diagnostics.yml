@@ -27,7 +27,31 @@ jobs:
           PROJECT_DIR="$(find hoops_diag/work -maxdepth 2 -name project.godot -printf '%h\n' | head -1)"
           test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "PROJECT_DIR=$PROJECT_DIR"
+
+      - name: Apply gameplay startup fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          p = Path(os.environ["PROJECT_DIR"]) / "scripts" / "main.gd"
+          s = p.read_text()
+          replacements = {
+              'var earned := stats.pts * 3 + stats.ast * 4 + stats.reb * 3 + stats.stl * 5 + (35 if won else 12)':
+              'var earned: int = int(stats.pts) * 3 + int(stats.ast) * 4 + int(stats.reb) * 3 + int(stats.stl) * 5 + (35 if won else 12)',
+              'var bob := abs(sin(player.anim_time * cadence)) * minf(speed * 0.008, 0.035)':
+              'var bob: float = absf(sin(float(player.anim_time) * cadence)) * minf(speed * 0.008, 0.035)',
+              'var bounce := abs(sin(dribble_clock * (9.4 if holder.velocity.length() > 4.0 else 8.0)))':
+              'var bounce: float = absf(sin(dribble_clock * (9.4 if holder.velocity.length() > 4.0 else 8.0)))',
+              'var change_side := signf(defender_motion.z) != signf(offset.z) and abs(offset.z) > 0.25':
+              'var change_side: bool = signf(defender_motion.z) != signf(offset.z) and absf(offset.z) > 0.25',
+          }
+          for old, new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f"Missing expected source line: {old}")
+              s = s.replace(old, new)
+          p.write_text(s)
+          PY
 
       - name: Download official Godot 4.7.2 editor
         shell: bash
@@ -45,7 +69,10 @@ jobs:
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
           "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor.log" 2>&1 | tee "$GITHUB_WORKSPACE/hoops_diag/editor-console.log"
           status=${PIPESTATUS[0]}
-          grep -nEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/editor.log" || true
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/editor.log"
+            exit 1
+          fi
           exit $status
 
       - name: Headless launch smoke test
@@ -56,11 +83,11 @@ jobs:
           timeout 10s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime.log" 2>&1 | tee "$GITHUB_WORKSPACE/hoops_diag/runtime-console.log"
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; then
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime.log"; then
             cat "$GITHUB_WORKSPACE/hoops_diag/runtime.log"
             exit 1
           fi
-          echo "Smoke test healthy (timeout means the game stayed running)."
+          echo "Smoke test healthy."
 
       - name: Create pack preset
         shell: bash
@@ -100,5 +127,7 @@ jobs:
         if: always()
         with:
           name: hoops-legacy-validated-pack
-          path: hoops_diag/artifact/
+          path: |
+            hoops_diag/artifact/
+            hoops_diag/*.log
           if-no-files-found: warn
