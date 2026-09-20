@@ -68,6 +68,21 @@ jobs:
           grep -q 'func update_finish_action' scripts/main.gd
           grep -q 'func camera_preset_name' scripts/main.gd
 
+      - name: Apply v0.3 validator fixes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          p = Path(os.environ["PROJECT_DIR"]) / "scripts" / "main.gd"
+          s = p.read_text()
+          old = 'button.name = text.replace(" ", "_").replace("/", "_")'
+          new = 'button.name = ("MenuButton_%d" % parent.get_child_count()) if text.is_empty() else text.replace(" ", "_").replace("/", "_")'
+          if old not in s:
+              raise SystemExit("ui_button naming line not found")
+          p.write_text(s.replace(old, new))
+          PY
+
       - name: Download official Godot 4.7.2 editor
         shell: bash
         run: |
