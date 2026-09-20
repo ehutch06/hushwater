@@ -1,6 +1,6 @@
 {
   "name": "hushwater",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Hushwater — a cozy online survival hangout for up to four friends.",
   "main": "main.js",
   "author": "Hushwater",
@@ -21,11 +21,24 @@
   "build": {
     "appId": "com.hushwater.game",
     "productName": "Hushwater",
-    "files": ["main.js", "preload.js", "app/**/*"],
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
     "asar": true,
-    "directories": {"output": "dist"},
+    "directories": {
+      "output": "dist"
+    },
     "win": {
-      "target": [{"target": "nsis", "arch": ["x64"]}],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "artifactName": "Hushwater-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -36,11 +49,13 @@
       "shortcutName": "Hushwater",
       "differentialPackage": true
     },
-    "publish": [{
-      "provider": "github",
-      "owner": "ehutch06",
-      "repo": "hushwater",
-      "releaseType": "release"
-    }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ehutch06",
+        "repo": "hushwater",
+        "releaseType": "release"
+      }
+    ]
   }
 }
