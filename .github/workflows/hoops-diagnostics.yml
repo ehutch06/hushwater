@@ -1,4 +1,4 @@
-name: Hoops Legacy v0.7 Clean-Room Motion Engine Windows Validated Build
+name: Hoops Legacy v0.8 Motion + Dynamic Camera Windows Validated Build
 
 on:
   push:
@@ -196,9 +196,43 @@ jobs:
           PY
           grep -q 'Hoops Legacy v0.7 - MOTION ENGINE' "$PROJECT_DIR/project.godot"
 
+      - name: Apply v0.8 clean dynamic camera pass and v0.7 parser fix
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "429bed944e9b94f955fdae85bd263352342015afe2cebdb730418baa0eee098b  hoops_diag/v08_camera_motion_patch_gz_b64.txt" | sha256sum -c -
+          base64 -d hoops_diag/v08_camera_motion_patch_gz_b64.txt > hoops_diag/v08.patch.gz
+          gzip -dc hoops_diag/v08.patch.gz > hoops_diag/v08.patch
+          echo "3c9e616c36eba903e8b853f32a7b5cd0559fa6c8421f309343c9c2badd35ca3c  hoops_diag/v08.patch" | sha256sum -c -
+          cd "$PROJECT_DIR"
+          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v08.patch"
+          grep -q 'camera_look_focus' scripts/main.gd
+          grep -q 'camera_transition_blend' scripts/main.gd
+          grep -q 'trajectory-driven' "$GITHUB_WORKSPACE/.github/workflows/hoops-diagnostics.yml" || true
+
+      - name: Force unmistakable v0.8 build identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path(os.environ["PROJECT_DIR"])
+          project = root / "project.godot"
+          s = project.read_text()
+          s = s.replace('config/name="Hoops Legacy v0.7 - MOTION ENGINE"', 'config/name="Hoops Legacy v0.8 - MOTION + CAMERA"')
+          project.write_text(s)
+
+          p = root / "scripts" / "main.gd"
+          s = p.read_text()
+          s = s.replace('v0.7 MOTION ENGINE', 'v0.8 MOTION + CAMERA')
+          p.write_text(s)
+          PY
+          grep -q 'Hoops Legacy v0.8 - MOTION + CAMERA' "$PROJECT_DIR/project.godot"
+          grep -q 'v0.8 MOTION + CAMERA' "$PROJECT_DIR/scripts/main.gd"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v07-source-snapshot
+          name: hoops-v08-source-snapshot
           path: ${{ env.PROJECT_DIR }}
           if-no-files-found: error
           compression-level: 6
@@ -217,37 +251,37 @@ jobs:
         run: |
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v07.log"
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v07.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v07.log"
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v08.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v08.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v08.log"
             exit 1
           fi
           set +e
-          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v07.log"
+          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v08.log"
           status=$?
           set -e
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v07.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v07.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v08.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v08.log"
             exit 1
           fi
 
-      - name: Render v0.7 visual proof
+      - name: Render v0.8 visual proof
         shell: bash
         run: |
           set -euxo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          export HOOPS_PREVIEW_PATH="$GITHUB_WORKSPACE/hoops_diag/v07-preview.png"
+          export HOOPS_PREVIEW_PATH="$GITHUB_WORKSPACE/hoops_diag/v08-preview.png"
           timeout 35s xvfb-run -a "$GODOT" --path "$PROJECT_DIR" -- --capture-preview
           test -s "$HOOPS_PREVIEW_PATH"
           file "$HOOPS_PREVIEW_PATH"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v07-visual-proof
-          path: hoops_diag/v07-preview.png
+          name: hoops-v08-visual-proof
+          path: hoops_diag/v08-preview.png
           if-no-files-found: error
           compression-level: 0
 
@@ -281,7 +315,7 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="build/HoopsLegacy-v0.7-MOTION-ENGINE.exe"
+          export_path="build/HoopsLegacy-v0.8-MOTION-CAMERA.exe"
           encryption_include_filters=""
           encryption_exclude_filters=""
           encrypt_pck=false
@@ -303,11 +337,11 @@ jobs:
           application/icon=""
           application/console_wrapper_icon=""
           application/icon_interpolation=4
-          application/file_version="0.7.0.0"
-          application/product_version="0.7.0.0"
+          application/file_version="0.8.0.0"
+          application/product_version="0.8.0.0"
           application/company_name=""
-          application/product_name="Hoops Legacy v0.7 MOTION ENGINE"
-          application/file_description="Hoops Legacy v0.7 Clean-Room Basketball Motion Engine"
+          application/product_name="Hoops Legacy v0.8 MOTION + CAMERA"
+          application/file_description="Hoops Legacy v0.8 Clean-Room Motion + Dynamic Camera"
           application/copyright=""
           application/trademarks=""
           EOF
@@ -320,17 +354,17 @@ jobs:
           BUILD_DIR="$GITHUB_WORKSPACE/hoops_diag/windows-build"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy-v0.7-MOTION-ENGINE.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v07.log"
-          test -s "$BUILD_DIR/HoopsLegacy-v0.7-MOTION-ENGINE.exe"
-          test -s "$BUILD_DIR/HoopsLegacy-v0.7-MOTION-ENGINE.pck"
-          file "$BUILD_DIR/HoopsLegacy-v0.7-MOTION-ENGINE.exe"
-          sha256sum "$BUILD_DIR/HoopsLegacy-v0.7-MOTION-ENGINE.exe" "$BUILD_DIR/HoopsLegacy-v0.7-MOTION-ENGINE.pck" > "$BUILD_DIR/SHA256SUMS.txt"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy-v0.8-MOTION-CAMERA.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v08.log"
+          test -s "$BUILD_DIR/HoopsLegacy-v0.8-MOTION-CAMERA.exe"
+          test -s "$BUILD_DIR/HoopsLegacy-v0.8-MOTION-CAMERA.pck"
+          file "$BUILD_DIR/HoopsLegacy-v0.8-MOTION-CAMERA.exe"
+          sha256sum "$BUILD_DIR/HoopsLegacy-v0.8-MOTION-CAMERA.exe" "$BUILD_DIR/HoopsLegacy-v0.8-MOTION-CAMERA.pck" > "$BUILD_DIR/SHA256SUMS.txt"
           cat > "$BUILD_DIR/START_HERE.txt" <<'EOF'
-          HOOPS LEGACY v0.7 - CLEAN-ROOM MOTION ENGINE
+          HOOPS LEGACY v0.8 - MOTION + DYNAMIC CAMERA
 
-          Double-click HoopsLegacy-v0.7-MOTION-ENGINE.exe.
-          The title bar MUST say: Hoops Legacy v0.7 - MOTION ENGINE
-          Keep HoopsLegacy-v0.7-MOTION-ENGINE.exe and HoopsLegacy-v0.7-MOTION-ENGINE.pck together.
+          Double-click HoopsLegacy-v0.8-MOTION-CAMERA.exe.
+          The title bar MUST say: Hoops Legacy v0.8 - MOTION + CAMERA
+          Keep HoopsLegacy-v0.8-MOTION-CAMERA.exe and HoopsLegacy-v0.8-MOTION-CAMERA.pck together.
 
           Major changes:
           - trajectory-driven movement: desired direction no longer instantly overwrites current momentum
@@ -342,13 +376,13 @@ jobs:
           - soft body contact resolution with momentum absorption instead of hard positional snapping
           - dribble cadence reacts to locomotion state and tracks the animated hand more tightly
           - dribble moves use less forced teleport displacement and feed momentum back into live movement
-          - tighter default 2K-style camera
+          - contextual 2K-style camera that frames the user, ball, defender and rim\n          - smooth look-target damping instead of snapping camera aim\n          - dynamic pullback during sprint/transition and subtle push-in on drives/shots\n          - calmer broadcast tracking and reduced cheap-looking camera shake
           - v0.6 skinned player model, MyCareer, dead-ball inbound and progression systems retained
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v07-windows-candidate
+          name: hoops-v08-windows-candidate
           path: hoops_diag/windows-build/
           if-no-files-found: error
           compression-level: 6
@@ -360,36 +394,36 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hoops-v07-windows-candidate
+          name: hoops-v08-windows-candidate
           path: build
 
       - name: Verify and launch actual Windows executable
         shell: pwsh
         run: |
           Get-ChildItem build
-          if (-not (Test-Path "build\HoopsLegacy-v0.7-MOTION-ENGINE.exe")) { throw "HoopsLegacy-v0.7-MOTION-ENGINE.exe missing" }
-          if (-not (Test-Path "build\HoopsLegacy-v0.7-MOTION-ENGINE.pck")) { throw "HoopsLegacy-v0.7-MOTION-ENGINE.pck missing" }
-          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy-v0.7-MOTION-ENGINE.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v07.log" -Wait -PassThru
+          if (-not (Test-Path "build\HoopsLegacy-v0.8-MOTION-CAMERA.exe")) { throw "HoopsLegacy-v0.8-MOTION-CAMERA.exe missing" }
+          if (-not (Test-Path "build\HoopsLegacy-v0.8-MOTION-CAMERA.pck")) { throw "HoopsLegacy-v0.8-MOTION-CAMERA.pck missing" }
+          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy-v0.8-MOTION-CAMERA.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v08.log" -Wait -PassThru
           Write-Host "Windows process exit code: $($proc.ExitCode)"
           if ($proc.ExitCode -ne 0) {
-            if (Test-Path "build\windows-runtime-v07.log") { Get-Content "build\windows-runtime-v07.log" }
+            if (Test-Path "build\windows-runtime-v08.log") { Get-Content "build\windows-runtime-v08.log" }
             throw "Windows executable returned non-zero exit code."
           }
-          if (Test-Path "build\windows-runtime-v07.log") {
-            Get-Content "build\windows-runtime-v07.log"
-            $bad = Select-String -Path "build\windows-runtime-v07.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
+          if (Test-Path "build\windows-runtime-v08.log") {
+            Get-Content "build\windows-runtime-v08.log"
+            $bad = Select-String -Path "build\windows-runtime-v08.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
             if ($bad) { throw "Godot reported an error during the Windows smoke test." }
           }
 
       - name: Package validated playtest
         shell: pwsh
         run: |
-          Remove-Item "build\windows-runtime-v07.log" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.7-Motion-Engine-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
+          Remove-Item "build\windows-runtime-v08.log" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.8-Motion-Camera-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: HoopsLegacy-v0.7-Motion-Engine-Windows-x64-VALIDATED
-          path: HoopsLegacy-v0.7-Motion-Engine-Windows-x64-VALIDATED.zip
+          name: HoopsLegacy-v0.8-Motion-Camera-Windows-x64-VALIDATED
+          path: HoopsLegacy-v0.8-Motion-Camera-Windows-x64-VALIDATED.zip
           if-no-files-found: error
           compression-level: 0
