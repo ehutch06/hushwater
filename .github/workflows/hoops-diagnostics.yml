@@ -1,4 +1,4 @@
-name: Hoops Legacy v0.4 Grounded MyCareer Windows Validated Build
+name: Hoops Legacy v0.5 Player Model Animation Windows Validated Build
 
 on:
   push:
@@ -99,9 +99,24 @@ jobs:
           grep -q 'func career_objective_targets' scripts/main.gd
           grep -q 'quarter_length' scripts/main.gd
 
+      - name: Apply v0.5 articulated player model and animation overhaul
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cat hoops_diag/v05_patch_b64_00.txt hoops_diag/v05_patch_b64_01.txt > hoops_diag/v05.patch.gz.b64
+          echo "8d6a925a6127100a61ac933074b51244a3f4e4458fa7c45701398cba446e5ba8  hoops_diag/v05.patch.gz.b64" | sha256sum -c -
+          base64 -d hoops_diag/v05.patch.gz.b64 > hoops_diag/v05.patch.gz
+          gzip -dc hoops_diag/v05.patch.gz > hoops_diag/v05.patch
+          echo "508b9fb5d6fe0d436d67ec5af1849b39aa8324c4fb799afe6f1161b1c909b038  hoops_diag/v05.patch" | sha256sum -c -
+          cd "$PROJECT_DIR"
+          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v05.patch"
+          grep -q 'func add_tapered_cylinder' scripts/main.gd
+          grep -q 'func resolve_player_contacts' scripts/main.gd
+          grep -q 'v0.5  •  PLAYER MODEL + ANIMATION OVERHAUL' scripts/main.gd
+
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v04-source-snapshot
+          name: hoops-v05-source-snapshot
           path: ${{ env.PROJECT_DIR }}
           if-no-files-found: error
           compression-level: 6
@@ -120,18 +135,18 @@ jobs:
         run: |
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v04.log"
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v04.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v04.log"
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v05.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v05.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v05.log"
             exit 1
           fi
           set +e
-          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v04.log"
+          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v05.log"
           status=$?
           set -e
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v04.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v04.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v05.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v05.log"
             exit 1
           fi
 
@@ -187,11 +202,11 @@ jobs:
           application/icon=""
           application/console_wrapper_icon=""
           application/icon_interpolation=4
-          application/file_version="0.4.0.0"
-          application/product_version="0.4.0.0"
+          application/file_version="0.5.0.0"
+          application/product_version="0.5.0.0"
           application/company_name=""
           application/product_name="Hoops Legacy"
-          application/file_description="Hoops Legacy v0.4 Grounded Gameplay and MyCareer"
+          application/file_description="Hoops Legacy v0.5 Player Model and Animation Overhaul"
           application/copyright=""
           application/trademarks=""
           EOF
@@ -204,33 +219,34 @@ jobs:
           BUILD_DIR="$GITHUB_WORKSPACE/hoops_diag/windows-build"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v04.log"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v05.log"
           test -s "$BUILD_DIR/HoopsLegacy.exe"
           test -s "$BUILD_DIR/HoopsLegacy.pck"
           file "$BUILD_DIR/HoopsLegacy.exe"
           sha256sum "$BUILD_DIR/HoopsLegacy.exe" "$BUILD_DIR/HoopsLegacy.pck" > "$BUILD_DIR/SHA256SUMS.txt"
           cat > "$BUILD_DIR/START_HERE.txt" <<'EOF'
-          HOOPS LEGACY v0.4 - GROUNDED GAMEPLAY + MYCAREER
+          HOOPS LEGACY v0.5 - PLAYER MODEL + ANIMATION OVERHAUL
 
           Double-click HoopsLegacy.exe.
           Keep HoopsLegacy.exe and HoopsLegacy.pck together.
 
-          New in this build:
-          - heavier, more grounded acceleration, braking, turning and foot planting
-          - reduced skating, bobbing and exaggerated body motion
-          - corrected hoop/backboard orientation and improved rim presentation
-          - real made-basket dead-ball flow: retreat, baseline inbound, inbound pass, then live play
-          - four-quarter game flow with clocks stopping during dead balls
-          - expanded MyCareer hub, role, fans, streaks, objectives and postgame results
-          - Player Development screen with finishing, shooting, playmaking, defense and athleticism upgrades
-          - career attributes now affect shooting, finishing, handles, defense and movement
-          - upgraded court materials, hardwood seams, baseline presentation and lighting
-          - existing v0.3 camera presets/settings retained
+          Major changes:
+          - rebuilt player bodies around articulated hip, knee, ankle, shoulder, elbow and wrist joints
+          - more realistic athletic proportions: smaller heads, longer limbs, narrower waists and broader shoulders
+          - layered jersey/shorts, socks, two-piece shoes, face/jaw/ears/hair and improved uniform details
+          - joint-driven running, defensive crouches, foot plants, arm swing, knee bend and toe-off
+          - new jump-shot dip, extension, high release and wrist follow-through
+          - articulated layup and dunk poses with knee tuck and arm extension
+          - dribble ball now meets the animated hand at the top of the bounce
+          - body-to-body player separation/contact reduces clipping and stacking
+          - slightly heavier acceleration/deceleration for a more grounded feel
+          - tighter default 2K camera so the upgraded models read larger on screen
+          - all v0.4 MyCareer, inbound, quarter, hoop and progression work retained
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v04-windows-candidate
+          name: hoops-v05-windows-candidate
           path: hoops_diag/windows-build/
           if-no-files-found: error
           compression-level: 6
@@ -242,7 +258,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hoops-v04-windows-candidate
+          name: hoops-v05-windows-candidate
           path: build
 
       - name: Verify and launch actual Windows executable
@@ -251,27 +267,27 @@ jobs:
           Get-ChildItem build
           if (-not (Test-Path "build\HoopsLegacy.exe")) { throw "HoopsLegacy.exe missing" }
           if (-not (Test-Path "build\HoopsLegacy.pck")) { throw "HoopsLegacy.pck missing" }
-          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v04.log" -Wait -PassThru
+          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v05.log" -Wait -PassThru
           Write-Host "Windows process exit code: $($proc.ExitCode)"
           if ($proc.ExitCode -ne 0) {
-            if (Test-Path "build\windows-runtime-v04.log") { Get-Content "build\windows-runtime-v04.log" }
+            if (Test-Path "build\windows-runtime-v05.log") { Get-Content "build\windows-runtime-v05.log" }
             throw "Windows executable returned non-zero exit code."
           }
-          if (Test-Path "build\windows-runtime-v04.log") {
-            Get-Content "build\windows-runtime-v04.log"
-            $bad = Select-String -Path "build\windows-runtime-v04.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
+          if (Test-Path "build\windows-runtime-v05.log") {
+            Get-Content "build\windows-runtime-v05.log"
+            $bad = Select-String -Path "build\windows-runtime-v05.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
             if ($bad) { throw "Godot reported an error during the Windows smoke test." }
           }
 
       - name: Package validated playtest
         shell: pwsh
         run: |
-          Remove-Item "build\windows-runtime-v04.log" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.4.0-Grounded-MyCareer-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
+          Remove-Item "build\windows-runtime-v05.log" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.5.0-Player-Model-Animation-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: HoopsLegacy-v0.4.0-Grounded-MyCareer-Windows-x64-VALIDATED
-          path: HoopsLegacy-v0.4.0-Grounded-MyCareer-Windows-x64-VALIDATED.zip
+          name: HoopsLegacy-v0.5.0-Player-Model-Animation-Windows-x64-VALIDATED
+          path: HoopsLegacy-v0.5.0-Player-Model-Animation-Windows-x64-VALIDATED.zip
           if-no-files-found: error
           compression-level: 0
