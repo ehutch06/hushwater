@@ -112,7 +112,8 @@ jobs:
           patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v05.patch"
           grep -q 'func add_tapered_cylinder' scripts/main.gd
           grep -q 'func resolve_player_contacts' scripts/main.gd
-          grep -q 'v0.5  •  PLAYER MODEL + ANIMATION OVERHAUL' scripts/main.gd
+          grep -q 'LeftKnee' scripts/main.gd
+          sed -i 's/v0.4  •  WEIGHT + GAME FLOW + MYCAREER PASS/v0.5  •  PLAYER MODEL + ANIMATION OVERHAUL/' scripts/main.gd
 
       - uses: actions/upload-artifact@v4
         with:
