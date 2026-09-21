@@ -114,6 +114,14 @@ jobs:
           grep -q 'func resolve_player_contacts' scripts/main.gd
           grep -q 'LeftKnee' scripts/main.gd
           sed -i 's/v0.4  •  WEIGHT + GAME FLOW + MYCAREER PASS/v0.5  •  PLAYER MODEL + ANIMATION OVERHAUL/' scripts/main.gd
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("scripts/main.gd")
+          s = p.read_text()
+          s = s.replace('var closing := (a.velocity - b.velocity).dot(normal)', 'var closing: float = (a.velocity - b.velocity).dot(normal)')
+          s = s.replace('var release_origin := user_team[user_index].right_hand.global_position.lerp(user_team[user_index].left_hand.global_position, 0.26)', 'var release_origin: Vector3 = user_team[user_index].right_hand.global_position.lerp(user_team[user_index].left_hand.global_position, 0.26)')
+          p.write_text(s)
+          PY
 
       - uses: actions/upload-artifact@v4
         with:
