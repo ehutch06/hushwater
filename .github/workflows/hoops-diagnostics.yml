@@ -1,4 +1,4 @@
-name: Hoops Legacy v0.5.1 New Rig Proof Windows Validated Build
+name: Hoops Legacy v0.6 Real Skinned Players Windows Validated Build
 
 on:
   push:
@@ -123,7 +123,29 @@ jobs:
           p.write_text(s)
           PY
 
-      - name: Force unmistakable v0.5.1 build identity
+      - name: Apply v0.6 real skinned player model patch
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "7807938fc35e887f268aa6f2e64502497d1043ae75f23232b562a49cded08e7f  hoops_diag/v06_patch_gz_b64.txt" | sha256sum -c -
+          base64 -d hoops_diag/v06_patch_gz_b64.txt > hoops_diag/v06.patch.gz
+          gzip -dc hoops_diag/v06.patch.gz > hoops_diag/v06.patch
+          echo "0916cfe36d7fbcc100de756f1d2f6f450b38078515ede9c074fc3c89ccd5fd52  hoops_diag/v06.patch" | sha256sum -c -
+          cd "$PROJECT_DIR"
+          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v06.patch"
+          mkdir -p assets
+          cp "$GITHUB_WORKSPACE/hoops_assets/quaternius_superhero_male.glb" assets/quaternius_superhero_male.glb
+          cp "$GITHUB_WORKSPACE/hoops_assets/QUATERNIUS-LICENSE.txt" assets/QUATERNIUS-LICENSE.txt
+          cp "$GITHUB_WORKSPACE/hoops_assets/QUATERNIUS-ANIMATIONS-LICENSE.txt" assets/QUATERNIUS-ANIMATIONS-LICENSE.txt
+          curl -fL --retry 3 -o assets/universal-animation-library.glb https://raw.githubusercontent.com/Seyamalam/blood-league-kickoff/main/public/assets/vendor/quaternius/universal-animation-library.glb
+          echo "4c748767741a3e495d89667b9a218b690ba9810b9517a12e960780e3ca72c4e9  assets/universal-animation-library.glb" | sha256sum -c -
+          test -s assets/quaternius_superhero_male.glb
+          test -s assets/universal-animation-library.glb
+          grep -q 'func find_first_skeleton' scripts/main.gd
+          grep -q 'quaternius_superhero_male.glb' scripts/main.gd
+          grep -q 'Jog_Fwd_Loop' scripts/main.gd
+
+      - name: Force unmistakable v0.6 build identity
         shell: bash
         run: |
           python3 - <<'PY'
@@ -132,21 +154,22 @@ jobs:
           root = Path(os.environ["PROJECT_DIR"])
           project = root / "project.godot"
           s = project.read_text()
-          s = s.replace('config/name="Hoops Legacy"', 'config/name="Hoops Legacy v0.5.1 - NEW PLAYER RIG"')
+          s = s.replace('config/name="Hoops Legacy"', 'config/name="Hoops Legacy v0.6 - REAL SKINNED PLAYERS"')
           project.write_text(s)
 
           p = root / "scripts" / "main.gd"
           s = p.read_text()
-          s = s.replace('v0.5  •  PLAYER MODEL + ANIMATION OVERHAUL', 'v0.5.1  •  NEW PLAYER RIG  •  UNIQUE BUILD')
-          s = s.replace('mode_label.text = "MYCAREER" if game_mode == "mycareer" else "PLAY NOW"', 'mode_label.text = ("MYCAREER" if game_mode == "mycareer" else "PLAY NOW") + "  •  v0.5.1 NEW RIG"')
+          s = s.replace('v0.5  •  PLAYER MODEL + ANIMATION OVERHAUL', 'v0.6  •  REAL SKINNED PLAYERS  •  CC0 HUMAN MESH')
+          s = s.replace('mode_label.text = "MYCAREER" if game_mode == "mycareer" else "PLAY NOW"', 'mode_label.text = ("MYCAREER" if game_mode == "mycareer" else "PLAY NOW") + "  •  v0.6 REAL PLAYERS"')
           p.write_text(s)
           PY
-          grep -q 'Hoops Legacy v0.5.1 - NEW PLAYER RIG' "$PROJECT_DIR/project.godot"
-          grep -q 'v0.5.1 NEW RIG' "$PROJECT_DIR/scripts/main.gd"
+          grep -q 'Hoops Legacy v0.6 - REAL SKINNED PLAYERS' "$PROJECT_DIR/project.godot"
+          grep -q 'v0.6 REAL PLAYERS' "$PROJECT_DIR/scripts/main.gd"
+          grep -q 'REAL SKINNED PLAYERS' "$PROJECT_DIR/scripts/main.gd"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v051-source-snapshot
+          name: hoops-v06-source-snapshot
           path: ${{ env.PROJECT_DIR }}
           if-no-files-found: error
           compression-level: 6
@@ -165,20 +188,39 @@ jobs:
         run: |
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v051.log"
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v051.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v051.log"
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v06.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v06.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v06.log"
             exit 1
           fi
           set +e
-          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v051.log"
+          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v06.log"
           status=$?
           set -e
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v051.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v051.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v06.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v06.log"
             exit 1
           fi
+
+      - name: Render v0.6 visual proof
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb
+          GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
+          export HOOPS_PREVIEW_PATH="$GITHUB_WORKSPACE/hoops_diag/v06-preview.png"
+          timeout 35s xvfb-run -a "$GODOT" --path "$PROJECT_DIR" -- --capture-preview
+          test -s "$HOOPS_PREVIEW_PATH"
+          file "$HOOPS_PREVIEW_PATH"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoops-v06-visual-proof
+          path: hoops_diag/v06-preview.png
+          if-no-files-found: error
+          compression-level: 0
 
       - name: Install official Godot 4.7.2 export templates
         shell: bash
@@ -210,7 +252,7 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="build/HoopsLegacy-v0.5.1-NEW-RIG.exe"
+          export_path="build/HoopsLegacy-v0.6-REAL-PLAYERS.exe"
           encryption_include_filters=""
           encryption_exclude_filters=""
           encrypt_pck=false
@@ -232,11 +274,11 @@ jobs:
           application/icon=""
           application/console_wrapper_icon=""
           application/icon_interpolation=4
-          application/file_version="0.5.1.0"
-          application/product_version="0.5.1.0"
+          application/file_version="0.6.0.0"
+          application/product_version="0.6.0.0"
           application/company_name=""
-          application/product_name="Hoops Legacy v0.5.1 NEW RIG"
-          application/file_description="Hoops Legacy v0.5.1 New Player Rig Proof Build"
+          application/product_name="Hoops Legacy v0.6 REAL SKINNED PLAYERS"
+          application/file_description="Hoops Legacy v0.6 Real Skinned Player Model Build"
           application/copyright=""
           application/trademarks=""
           EOF
@@ -249,16 +291,16 @@ jobs:
           BUILD_DIR="$GITHUB_WORKSPACE/hoops_diag/windows-build"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy-v0.5.1-NEW-RIG.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v051.log"
-          test -s "$BUILD_DIR/HoopsLegacy-v0.5.1-NEW-RIG.exe"
-          test -s "$BUILD_DIR/HoopsLegacy-v0.5.1-NEW-RIG.pck"
-          file "$BUILD_DIR/HoopsLegacy-v0.5.1-NEW-RIG.exe"
-          sha256sum "$BUILD_DIR/HoopsLegacy-v0.5.1-NEW-RIG.exe" "$BUILD_DIR/HoopsLegacy-v0.5.1-NEW-RIG.pck" > "$BUILD_DIR/SHA256SUMS.txt"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy-v0.6-REAL-PLAYERS.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v06.log"
+          test -s "$BUILD_DIR/HoopsLegacy-v0.6-REAL-PLAYERS.exe"
+          test -s "$BUILD_DIR/HoopsLegacy-v0.6-REAL-PLAYERS.pck"
+          file "$BUILD_DIR/HoopsLegacy-v0.6-REAL-PLAYERS.exe"
+          sha256sum "$BUILD_DIR/HoopsLegacy-v0.6-REAL-PLAYERS.exe" "$BUILD_DIR/HoopsLegacy-v0.6-REAL-PLAYERS.pck" > "$BUILD_DIR/SHA256SUMS.txt"
           cat > "$BUILD_DIR/START_HERE.txt" <<'EOF'
-          HOOPS LEGACY v0.5.1 - NEW PLAYER RIG PROOF BUILD
+          HOOPS LEGACY v0.6 - REAL SKINNED PLAYERS
 
-          Double-click HoopsLegacy-v0.5.1-NEW-RIG.exe.\n          The title bar MUST say: Hoops Legacy v0.5.1 - NEW PLAYER RIG
-          Keep HoopsLegacy-v0.5.1-NEW-RIG.exe and HoopsLegacy-v0.5.1-NEW-RIG.pck together.
+          Double-click HoopsLegacy-v0.6-REAL-PLAYERS.exe.\n          The title bar MUST say: Hoops Legacy v0.6 - REAL SKINNED PLAYERS
+          Keep HoopsLegacy-v0.6-REAL-PLAYERS.exe and HoopsLegacy-v0.6-REAL-PLAYERS.pck together.
 
           Major changes:
           - rebuilt player bodies around articulated hip, knee, ankle, shoulder, elbow and wrist joints
@@ -276,7 +318,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v051-windows-candidate
+          name: hoops-v06-windows-candidate
           path: hoops_diag/windows-build/
           if-no-files-found: error
           compression-level: 6
@@ -288,36 +330,36 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hoops-v051-windows-candidate
+          name: hoops-v06-windows-candidate
           path: build
 
       - name: Verify and launch actual Windows executable
         shell: pwsh
         run: |
           Get-ChildItem build
-          if (-not (Test-Path "build\HoopsLegacy-v0.5.1-NEW-RIG.exe")) { throw "HoopsLegacy-v0.5.1-NEW-RIG.exe missing" }
-          if (-not (Test-Path "build\HoopsLegacy-v0.5.1-NEW-RIG.pck")) { throw "HoopsLegacy-v0.5.1-NEW-RIG.pck missing" }
-          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy-v0.5.1-NEW-RIG.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v051.log" -Wait -PassThru
+          if (-not (Test-Path "build\HoopsLegacy-v0.6-REAL-PLAYERS.exe")) { throw "HoopsLegacy-v0.6-REAL-PLAYERS.exe missing" }
+          if (-not (Test-Path "build\HoopsLegacy-v0.6-REAL-PLAYERS.pck")) { throw "HoopsLegacy-v0.6-REAL-PLAYERS.pck missing" }
+          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy-v0.6-REAL-PLAYERS.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v06.log" -Wait -PassThru
           Write-Host "Windows process exit code: $($proc.ExitCode)"
           if ($proc.ExitCode -ne 0) {
-            if (Test-Path "build\windows-runtime-v051.log") { Get-Content "build\windows-runtime-v051.log" }
+            if (Test-Path "build\windows-runtime-v06.log") { Get-Content "build\windows-runtime-v06.log" }
             throw "Windows executable returned non-zero exit code."
           }
-          if (Test-Path "build\windows-runtime-v051.log") {
-            Get-Content "build\windows-runtime-v051.log"
-            $bad = Select-String -Path "build\windows-runtime-v051.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
+          if (Test-Path "build\windows-runtime-v06.log") {
+            Get-Content "build\windows-runtime-v06.log"
+            $bad = Select-String -Path "build\windows-runtime-v06.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
             if ($bad) { throw "Godot reported an error during the Windows smoke test." }
           }
 
       - name: Package validated playtest
         shell: pwsh
         run: |
-          Remove-Item "build\windows-runtime-v051.log" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.5.1-New-Rig-Proof-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
+          Remove-Item "build\windows-runtime-v06.log" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.6-Real-Skinned-Players-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: HoopsLegacy-v0.5.1-New-Rig-Proof-Windows-x64-VALIDATED
-          path: HoopsLegacy-v0.5.1-New-Rig-Proof-Windows-x64-VALIDATED.zip
+          name: HoopsLegacy-v0.6-Real-Skinned-Players-Windows-x64-VALIDATED
+          path: HoopsLegacy-v0.6-Real-Skinned-Players-Windows-x64-VALIDATED.zip
           if-no-files-found: error
           compression-level: 0
