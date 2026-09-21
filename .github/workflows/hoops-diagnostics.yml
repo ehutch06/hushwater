@@ -99,6 +99,13 @@ jobs:
           grep -q 'func career_objective_targets' scripts/main.gd
           grep -q 'quarter_length' scripts/main.gd
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hoops-v04-source-snapshot
+          path: ${{ env.PROJECT_DIR }}
+          if-no-files-found: error
+          compression-level: 6
+
       - name: Download official Godot 4.7.2 editor
         shell: bash
         run: |
