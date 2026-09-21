@@ -208,7 +208,15 @@ jobs:
           patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v08.patch"
           grep -q 'camera_look_focus' scripts/main.gd
           grep -q 'camera_transition_blend' scripts/main.gd
-          grep -q 'trajectory-driven' "$GITHUB_WORKSPACE/.github/workflows/hoops-diagnostics.yml" || true
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("scripts/main.gd")
+          s = p.read_text()
+          s = s.replace('\\n\t\t\tvar resolved := resolve_animation_name(anim_player, wanted)', '\t\t\tvar resolved := resolve_animation_name(anim_player, wanted)')
+          s = s.replace('\\n\t\t\t# Directional pose correction: travel direction can lead the hips while shoulders stay closer to matchup/rim facing.', '\t\t\t# Directional pose correction: travel direction can lead the hips while shoulders stay closer to matchup/rim facing.')
+          p.write_text(s)
+          PY
+          ! grep -n '^\\\\n' scripts/main.gd
 
       - name: Force unmistakable v0.8 build identity
         shell: bash
@@ -376,7 +384,10 @@ jobs:
           - soft body contact resolution with momentum absorption instead of hard positional snapping
           - dribble cadence reacts to locomotion state and tracks the animated hand more tightly
           - dribble moves use less forced teleport displacement and feed momentum back into live movement
-          - contextual 2K-style camera that frames the user, ball, defender and rim\n          - smooth look-target damping instead of snapping camera aim\n          - dynamic pullback during sprint/transition and subtle push-in on drives/shots\n          - calmer broadcast tracking and reduced cheap-looking camera shake
+          - contextual 2K-style camera that frames the user, ball, defender and rim
+          - smooth look-target damping instead of snapping camera aim
+          - dynamic pullback during sprint/transition and subtle push-in on drives/shots
+          - calmer broadcast tracking and reduced cheap-looking camera shake
           - v0.6 skinned player model, MyCareer, dead-ball inbound and progression systems retained
           EOF
 
