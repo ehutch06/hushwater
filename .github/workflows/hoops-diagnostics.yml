@@ -302,7 +302,6 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          echo "88191dfa7480b0a10f87b38350afd1fed0f6d8cc7da7a0d89c9018f14901033f  hoops_diag/v10_uniform_court_patch_gz_b64.txt" | sha256sum -c -
           base64 -d hoops_diag/v10_uniform_court_patch_gz_b64.txt > hoops_diag/v10.patch.gz
           gzip -dc hoops_diag/v10.patch.gz > hoops_diag/v10.patch
           echo "27beb48cdcf65d8802223e9f5ba17fa68c9fead5ec0d6d7c3ce726dd394f97e5  hoops_diag/v10.patch" | sha256sum -c -
