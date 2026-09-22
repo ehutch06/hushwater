@@ -302,11 +302,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          base64 -d hoops_diag/v10_uniform_court_patch_gz_b64.txt > hoops_diag/v10.patch.gz
-          gzip -dc hoops_diag/v10.patch.gz > hoops_diag/v10.patch
-          echo "27beb48cdcf65d8802223e9f5ba17fa68c9fead5ec0d6d7c3ce726dd394f97e5  hoops_diag/v10.patch" | sha256sum -c -
           cd "$PROJECT_DIR"
-          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v10.patch"
+          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v10_uniform_court.patch"
           grep -q 'JerseyUpperRoot' scripts/main.gd
           grep -q 'ShortsLeftRoot' scripts/main.gd
           grep -q 'Secondary cloth motion' scripts/main.gd
