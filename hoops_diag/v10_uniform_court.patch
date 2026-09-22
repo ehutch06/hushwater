@@ -1,0 +1,189 @@
+--- a/scripts/main.gd
++++ b/scripts/main.gd
+@@ -154,7 +154,7 @@
+ 	env.background_color = Color("#020409")
+ 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+ 	env.ambient_light_color = Color("#d4d9e2")
+-	env.ambient_light_energy = 0.28
++	env.ambient_light_energy = 0.22
+ 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+ 	world.environment = env
+ 	add_child(world)
+@@ -162,7 +162,7 @@
+ 	# Arena-style key light: bright court, dark bowl, neutral skin tones.
+ 	var key := DirectionalLight3D.new()
+ 	key.rotation_degrees = Vector3(-62.0, -18.0, 0.0)
+-	key.light_energy = 1.38
++	key.light_energy = 1.06
+ 	key.light_color = Color("#f8f6ef")
+ 	key.shadow_enabled = true
+ 	key.directional_shadow_max_distance = 52.0
+@@ -172,7 +172,7 @@
+ 		var light := OmniLight3D.new()
+ 		light.position = Vector3(x, 11.8, 0.0)
+ 		light.omni_range = 17.5
+-		light.light_energy = 7.1
++		light.light_energy = 4.35
+ 		light.light_color = Color("#fff8e8")
+ 		light.shadow_enabled = x in [-3.4, 3.4]
+ 		add_child(light)
+@@ -181,7 +181,7 @@
+ 		var sidelight := OmniLight3D.new()
+ 		sidelight.position = Vector3(0.0, 7.2, z)
+ 		sidelight.omni_range = 13.5
+-		sidelight.light_energy = 1.15
++		sidelight.light_energy = 0.82
+ 		sidelight.light_color = Color("#b7c5da")
+ 		add_child(sidelight)
+ 
+@@ -379,16 +379,17 @@
+ 
+ 
+ func create_court() -> void:
+-	var maple := Color("#c99c64")
+-	var maple_light := Color("#d4aa72")
+-	var seam_color := Color("#8e6946")
+-	var line_color := Color("#f5f5f2")
+-	var paint_color := Color("#132e50")
++	# v0.10: lower-contrast broadcast hardwood. The floor should support the players, not glow under them.
++	var maple := Color("#ad8357")
++	var maple_light := Color("#bd9364")
++	var seam_color := Color("#95704d")
++	var line_color := Color("#e7e7e2")
++	var paint_color := Color("#193754")
+ 
+ 	var trim := add_box(self, Vector3(COURT_LENGTH + 0.48, 0.12, COURT_WIDTH + 0.48), Vector3(0.0, -0.10, 0.0), Color("#0b1017"), "CourtTrim")
+ 	trim.material_override = make_material(Color("#0b1017"), 0.48)
+ 	var hardwood := add_box(self, Vector3(COURT_LENGTH, 0.16, COURT_WIDTH), Vector3(0.0, -0.035, 0.0), maple, "Hardwood")
+-	hardwood.material_override = make_material(maple_light, 0.27)
++	hardwood.material_override = make_material(maple_light, 0.43)
+ 
+ 	# Long, subtle plank seams read like polished hardwood instead of a flat orange slab.
+ 	for i in range(1, 46):
+@@ -396,7 +397,7 @@
+ 		add_box(self, Vector3(COURT_LENGTH - 0.08, 0.004, 0.006), Vector3(0.0, 0.051, z), seam_color, "WoodSeam")
+ 	for i in range(1, 13):
+ 		var x := -HALF_X + float(i) * (COURT_LENGTH / 13.0)
+-		add_box(self, Vector3(0.007, 0.004, COURT_WIDTH - 0.08), Vector3(x, 0.052, 0.0), Color("#b18459"), "WoodJoint")
++		add_box(self, Vector3(0.007, 0.004, COURT_WIDTH - 0.08), Vector3(x, 0.052, 0.0), Color("#a47a51"), "WoodJoint")
+ 
+ 	add_line(Vector3(-HALF_X, 0.064, -HALF_Z), Vector3(HALF_X, 0.064, -HALF_Z), line_color, 0.050)
+ 	add_line(Vector3(-HALF_X, 0.064, HALF_Z), Vector3(HALF_X, 0.064, HALF_Z), line_color, 0.050)
+@@ -576,11 +577,13 @@
+ 		push_error("Skinned player skeleton not found")
+ 		return {}
+ 
+-	# Preserve individual skin tones while using the actual 13k-triangle human body.
++	# Preserve individual skin tones while giving each body a little more NBA-style mass through the torso.
+ 	var body_mesh := find_mesh_named(visual, "SuperHero_Male")
++	var bulk_t: float = clampf((bulk - 0.90) / 0.38, 0.0, 1.0)
+ 	if body_mesh:
+-		body_mesh.material_override = make_material(skin, 0.58)
++		body_mesh.material_override = make_material(skin, 0.64)
+ 		body_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
++		body_mesh.scale = Vector3(lerpf(0.96, 1.075, bulk_t), 1.0, lerpf(0.97, 1.055, bulk_t))
+ 	var eyes_mesh := find_mesh_named(visual, "Eyes")
+ 	if eyes_mesh:
+ 		eyes_mesh.material_override = make_material(Color("#f4f5f7"), 0.42)
+@@ -588,16 +591,37 @@
+ 	if brows_mesh:
+ 		brows_mesh.material_override = make_material(profile.hair, 0.70)
+ 
+-	# Basketball kit layered over the skinned body. These are intentionally slim so the human silhouette stays visible.
+-	var jersey := add_capsule(visual, 0.205 * bulk, 0.515, Vector3(0.0, 1.292, -0.004), jersey_color, "JerseyShell")
+-	jersey.scale = Vector3(1.24, 1.0, 0.72)
+-	jersey.material_override = make_material(jersey_color, 0.72)
+-	var jersey_trim := add_box(visual, Vector3(0.54 * bulk, 0.032, 0.026), Vector3(0.0, 1.53, 0.205), accent.lightened(0.10), "JerseyTrim")
+-	jersey_trim.material_override = make_material(accent.lightened(0.10), 0.78)
+-	var shorts := add_capsule(visual, 0.205 * bulk, 0.285, Vector3(0.0, 0.91, 0.0), accent, "ShortsShell")
+-	shorts.scale = Vector3(1.20, 1.0, 0.76)
+-	shorts.material_override = make_material(accent, 0.76)
+-	add_box(visual, Vector3(0.47 * bulk, 0.032, 0.275), Vector3(0.0, 1.025, 0.0), jersey_color.lightened(0.06), "Waistband")
++	# v0.10 uniform rig: split the jersey across spine bones and each short leg across the thigh bones.
++	# It is still procedural geometry, but it now bends with the skeleton instead of floating as one rigid capsule.
++	var jersey_upper_root := make_bone_marker(skeleton, "spine_03", "JerseyUpperRoot")
++	var jersey_lower_root := make_bone_marker(skeleton, "spine_01", "JerseyLowerRoot")
++	var shorts_waist_root := make_bone_marker(skeleton, "pelvis", "ShortsWaistRoot")
++	var shorts_left_root := make_bone_marker(skeleton, "thigh_l", "ShortsLeftRoot")
++	var shorts_right_root := make_bone_marker(skeleton, "thigh_r", "ShortsRightRoot")
++
++	# Looser sleeveless silhouette: narrower shoulders, slight flare at the waist, and a separate lower fabric panel.
++	var jersey_upper := add_tapered_cylinder(jersey_upper_root, 0.225 * bulk, 0.245 * bulk, 0.34, Vector3(0.0, 0.035, 0.0), jersey_color, "JerseyUpper", 0.82)
++	jersey_upper.scale = Vector3(1.10, 1.0, 0.69)
++	var jersey_lower := add_tapered_cylinder(jersey_lower_root, 0.235 * bulk, 0.270 * bulk, 0.30, Vector3(0.0, 0.075, 0.0), jersey_color, "JerseyLower", 0.84)
++	jersey_lower.scale = Vector3(1.10, 1.0, 0.70)
++	# Fake V-neck opening and piping so the chest reads like a jersey instead of a barrel.
++	var neck_open := add_box(jersey_upper_root, Vector3(0.16 * bulk, 0.095, 0.028), Vector3(0.0, 0.155, 0.153), skin, "NeckOpening")
++	neck_open.rotation.z = 0.0
++	var chest_trim := add_box(jersey_upper_root, Vector3(0.36 * bulk, 0.022, 0.025), Vector3(0.0, 0.105, 0.172), accent.lightened(0.08), "ChestTrim")
++	chest_trim.material_override = make_material(accent.lightened(0.08), 0.86)
++	for side in [-1.0, 1.0]:
++		var side_panel := add_box(jersey_lower_root, Vector3(0.022, 0.275, 0.28), Vector3(side * 0.254 * bulk, 0.070, 0.0), accent.darkened(0.05), "JerseySidePanel")
++		side_panel.material_override = make_material(accent.darkened(0.05), 0.86)
++
++	# Baggy split shorts. Each leg follows its own thigh so running/crouching no longer deforms one solid shell.
++	var shorts_waist := add_tapered_cylinder(shorts_waist_root, 0.235 * bulk, 0.265 * bulk, 0.13, Vector3(0.0, 0.105, 0.0), accent, "ShortsWaist", 0.88)
++	shorts_waist.scale = Vector3(1.10, 1.0, 0.72)
++	var shorts_left := add_tapered_cylinder(shorts_left_root, 0.145 * bulk, 0.178 * bulk, 0.31, Vector3(0.0, 0.155, 0.0), accent, "ShortsLeft", 0.90)
++	shorts_left.scale = Vector3(1.05, 1.0, 0.72)
++	var shorts_right := add_tapered_cylinder(shorts_right_root, 0.145 * bulk, 0.178 * bulk, 0.31, Vector3(0.0, 0.155, 0.0), accent, "ShortsRight", 0.90)
++	shorts_right.scale = Vector3(1.05, 1.0, 0.72)
++	var waistband := add_box(shorts_waist_root, Vector3(0.49 * bulk, 0.034, 0.29), Vector3(0.0, 0.155, 0.0), jersey_color.lightened(0.04), "Waistband")
++	waistband.material_override = make_material(jersey_color.lightened(0.04), 0.90)
+ 
+ 	# Hair and shoes remain lightweight overlays, but the anatomy underneath is a real skinned character.
+ 	var hair := add_sphere(visual, 0.158, Vector3(0.0, 1.755, -0.006), profile.hair, "HairCap")
+@@ -616,15 +640,15 @@
+ 	number.font_size = 52
+ 	number.modulate = Color.WHITE
+ 	number.outline_size = 7
+-	number.position = Vector3(0.0, 1.31, 0.228)
+-	visual.add_child(number)
++	number.position = Vector3(0.0, -0.015, 0.186)
++	jersey_upper_root.add_child(number)
+ 	var team_word := Label3D.new()
+ 	team_word.text = "PHI" if profile.team == 0 else "LAL"
+ 	team_word.font_size = 22
+ 	team_word.modulate = Color("#f7f8fc")
+ 	team_word.outline_size = 5
+-	team_word.position = Vector3(0.0, 1.47, 0.226)
+-	visual.add_child(team_word)
++	team_word.position = Vector3(0.0, 0.110, 0.184)
++	jersey_upper_root.add_child(team_word)
+ 
+ 	# Hand markers are bone-attached, so the ball now follows the skinned hands instead of an approximation.
+ 	var left_hand := make_bone_marker(skeleton, "hand_l", "LeftHandMarker")
+@@ -673,6 +697,8 @@
+ 		"body_root": visual, "torso": visual, "head_pivot": head_marker,
+ 		"left_hand": left_hand, "right_hand": right_hand,
+ 		"skeleton": skeleton, "anim_player": anim_player, "anim_clip": "",
++		"jersey_upper_root": jersey_upper_root, "jersey_lower_root": jersey_lower_root,
++		"shorts_waist_root": shorts_waist_root, "shorts_left_root": shorts_left_root, "shorts_right_root": shorts_right_root,
+ 		"shadow": shadow, "indicator": indicator,
+ 		"base_y": 0.0, "body_scale": height_scale, "visual_base_yaw": PI * 0.5,
+ 		"burst": 0.0, "plant": 0.0, "stance": 0.0, "finish_y": 0.0, "contact": 0.0,
+@@ -2122,6 +2148,24 @@
+ 				ground_drop = maxf(ground_drop, 0.022)
+ 			visual.position.y = lerpf(visual.position.y, -ground_drop, minf(1.0, delta * 13.0))
+ 
++			# Secondary cloth motion: subtle lag/flap on the loose lower jersey and split shorts.
++			var cloth_amount: float = clampf(speed / 5.4, 0.0, 1.0)
++			var cloth_phase: float = float(player.anim_time) * (5.4 + speed * 0.72)
++			var jersey_lower_root: Node3D = player.get("jersey_lower_root") as Node3D
++			var shorts_waist_root: Node3D = player.get("shorts_waist_root") as Node3D
++			var shorts_left_root: Node3D = player.get("shorts_left_root") as Node3D
++			var shorts_right_root: Node3D = player.get("shorts_right_root") as Node3D
++			if jersey_lower_root:
++				var jersey_sway: float = sin(cloth_phase) * 0.028 * cloth_amount + turn_lean * 0.018
++				jersey_lower_root.rotation.z = lerpf(jersey_lower_root.rotation.z, jersey_sway, minf(1.0, delta * 7.5))
++				jersey_lower_root.rotation.x = lerpf(jersey_lower_root.rotation.x, -0.018 * cloth_amount, minf(1.0, delta * 7.0))
++			if shorts_waist_root:
++				shorts_waist_root.rotation.z = lerpf(shorts_waist_root.rotation.z, -turn_lean * 0.010, minf(1.0, delta * 9.0))
++			if shorts_left_root and shorts_right_root:
++				var leg_flutter: float = sin(cloth_phase + 0.6) * 0.020 * cloth_amount
++				shorts_left_root.rotation.z = lerpf(shorts_left_root.rotation.z, leg_flutter, minf(1.0, delta * 8.0))
++				shorts_right_root.rotation.z = lerpf(shorts_right_root.rotation.z, -leg_flutter, minf(1.0, delta * 8.0))
++
+ 
+ func update_finish_action(delta: float) -> void:
+ 	if finish_action.is_empty():
