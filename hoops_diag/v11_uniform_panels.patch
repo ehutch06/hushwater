@@ -1,0 +1,157 @@
+--- a/scripts/main.gd
++++ b/scripts/main.gd
+@@ -154,7 +154,7 @@
+ 	env.background_color = Color("#020409")
+ 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+ 	env.ambient_light_color = Color("#d4d9e2")
+-	env.ambient_light_energy = 0.22
++	env.ambient_light_energy = 0.18
+ 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+ 	world.environment = env
+ 	add_child(world)
+@@ -162,7 +162,7 @@
+ 	# Arena-style key light: bright court, dark bowl, neutral skin tones.
+ 	var key := DirectionalLight3D.new()
+ 	key.rotation_degrees = Vector3(-62.0, -18.0, 0.0)
+-	key.light_energy = 1.06
++	key.light_energy = 0.88
+ 	key.light_color = Color("#f8f6ef")
+ 	key.shadow_enabled = true
+ 	key.directional_shadow_max_distance = 52.0
+@@ -172,7 +172,7 @@
+ 		var light := OmniLight3D.new()
+ 		light.position = Vector3(x, 11.8, 0.0)
+ 		light.omni_range = 17.5
+-		light.light_energy = 4.35
++		light.light_energy = 2.85
+ 		light.light_color = Color("#fff8e8")
+ 		light.shadow_enabled = x in [-3.4, 3.4]
+ 		add_child(light)
+@@ -181,7 +181,7 @@
+ 		var sidelight := OmniLight3D.new()
+ 		sidelight.position = Vector3(0.0, 7.2, z)
+ 		sidelight.omni_range = 13.5
+-		sidelight.light_energy = 0.82
++		sidelight.light_energy = 0.64
+ 		sidelight.light_color = Color("#b7c5da")
+ 		add_child(sidelight)
+ 
+@@ -380,16 +380,16 @@
+ 
+ func create_court() -> void:
+ 	# v0.10: lower-contrast broadcast hardwood. The floor should support the players, not glow under them.
+-	var maple := Color("#ad8357")
+-	var maple_light := Color("#bd9364")
+-	var seam_color := Color("#95704d")
+-	var line_color := Color("#e7e7e2")
+-	var paint_color := Color("#193754")
++	var maple := Color("#95704b")
++	var maple_light := Color("#a87f55")
++	var seam_color := Color("#806043")
++	var line_color := Color("#deded9")
++	var paint_color := Color("#17324b")
+ 
+ 	var trim := add_box(self, Vector3(COURT_LENGTH + 0.48, 0.12, COURT_WIDTH + 0.48), Vector3(0.0, -0.10, 0.0), Color("#0b1017"), "CourtTrim")
+ 	trim.material_override = make_material(Color("#0b1017"), 0.48)
+ 	var hardwood := add_box(self, Vector3(COURT_LENGTH, 0.16, COURT_WIDTH), Vector3(0.0, -0.035, 0.0), maple, "Hardwood")
+-	hardwood.material_override = make_material(maple_light, 0.43)
++	hardwood.material_override = make_material(maple_light, 0.58)
+ 
+ 	# Long, subtle plank seams read like polished hardwood instead of a flat orange slab.
+ 	for i in range(1, 46):
+@@ -397,7 +397,7 @@
+ 		add_box(self, Vector3(COURT_LENGTH - 0.08, 0.004, 0.006), Vector3(0.0, 0.051, z), seam_color, "WoodSeam")
+ 	for i in range(1, 13):
+ 		var x := -HALF_X + float(i) * (COURT_LENGTH / 13.0)
+-		add_box(self, Vector3(0.007, 0.004, COURT_WIDTH - 0.08), Vector3(x, 0.052, 0.0), Color("#a47a51"), "WoodJoint")
++		add_box(self, Vector3(0.007, 0.004, COURT_WIDTH - 0.08), Vector3(x, 0.052, 0.0), Color("#8d6947"), "WoodJoint")
+ 
+ 	add_line(Vector3(-HALF_X, 0.064, -HALF_Z), Vector3(HALF_X, 0.064, -HALF_Z), line_color, 0.050)
+ 	add_line(Vector3(-HALF_X, 0.064, HALF_Z), Vector3(HALF_X, 0.064, HALF_Z), line_color, 0.050)
+@@ -591,37 +591,63 @@
+ 	if brows_mesh:
+ 		brows_mesh.material_override = make_material(profile.hair, 0.70)
+ 
+-	# v0.10 uniform rig: split the jersey across spine bones and each short leg across the thigh bones.
+-	# It is still procedural geometry, but it now bends with the skeleton instead of floating as one rigid capsule.
++	# v0.11 uniform rig: bone-attached cloth panels instead of capsule/cylinder shells.
++	# The flat front/back + side construction reads much more like a real sleeveless jersey at gameplay distance.
+ 	var jersey_upper_root := make_bone_marker(skeleton, "spine_03", "JerseyUpperRoot")
+ 	var jersey_lower_root := make_bone_marker(skeleton, "spine_01", "JerseyLowerRoot")
+ 	var shorts_waist_root := make_bone_marker(skeleton, "pelvis", "ShortsWaistRoot")
+ 	var shorts_left_root := make_bone_marker(skeleton, "thigh_l", "ShortsLeftRoot")
+ 	var shorts_right_root := make_bone_marker(skeleton, "thigh_r", "ShortsRightRoot")
+ 
+-	# Looser sleeveless silhouette: narrower shoulders, slight flare at the waist, and a separate lower fabric panel.
+-	var jersey_upper := add_tapered_cylinder(jersey_upper_root, 0.225 * bulk, 0.245 * bulk, 0.34, Vector3(0.0, 0.035, 0.0), jersey_color, "JerseyUpper", 0.82)
+-	jersey_upper.scale = Vector3(1.10, 1.0, 0.69)
+-	var jersey_lower := add_tapered_cylinder(jersey_lower_root, 0.235 * bulk, 0.270 * bulk, 0.30, Vector3(0.0, 0.075, 0.0), jersey_color, "JerseyLower", 0.84)
+-	jersey_lower.scale = Vector3(1.10, 1.0, 0.70)
+-	# Fake V-neck opening and piping so the chest reads like a jersey instead of a barrel.
+-	var neck_open := add_box(jersey_upper_root, Vector3(0.16 * bulk, 0.095, 0.028), Vector3(0.0, 0.155, 0.153), skin, "NeckOpening")
+-	neck_open.rotation.z = 0.0
+-	var chest_trim := add_box(jersey_upper_root, Vector3(0.36 * bulk, 0.022, 0.025), Vector3(0.0, 0.105, 0.172), accent.lightened(0.08), "ChestTrim")
+-	chest_trim.material_override = make_material(accent.lightened(0.08), 0.86)
++	var jersey_mat := make_material(jersey_color, 0.90)
++	var shorts_mat := make_material(accent, 0.92)
++	# Upper vest: leave the shoulders/arms visible and give the chest a flatter sports-jersey silhouette.
++	for z in [-0.135, 0.135]:
++		var upper_panel := add_box(jersey_upper_root, Vector3(0.44 * bulk, 0.30, 0.026), Vector3(0.0, 0.015, z), jersey_color, "JerseyUpperPanel")
++		upper_panel.material_override = jersey_mat
+ 	for side in [-1.0, 1.0]:
+-		var side_panel := add_box(jersey_lower_root, Vector3(0.022, 0.275, 0.28), Vector3(side * 0.254 * bulk, 0.070, 0.0), accent.darkened(0.05), "JerseySidePanel")
+-		side_panel.material_override = make_material(accent.darkened(0.05), 0.86)
++		var upper_side := add_box(jersey_upper_root, Vector3(0.028, 0.29, 0.27), Vector3(side * 0.218 * bulk, 0.010, 0.0), jersey_color, "JerseyUpperSide")
++		upper_side.material_override = jersey_mat
+ 
+-	# Baggy split shorts. Each leg follows its own thigh so running/crouching no longer deforms one solid shell.
+-	var shorts_waist := add_tapered_cylinder(shorts_waist_root, 0.235 * bulk, 0.265 * bulk, 0.13, Vector3(0.0, 0.105, 0.0), accent, "ShortsWaist", 0.88)
+-	shorts_waist.scale = Vector3(1.10, 1.0, 0.72)
+-	var shorts_left := add_tapered_cylinder(shorts_left_root, 0.145 * bulk, 0.178 * bulk, 0.31, Vector3(0.0, 0.155, 0.0), accent, "ShortsLeft", 0.90)
+-	shorts_left.scale = Vector3(1.05, 1.0, 0.72)
+-	var shorts_right := add_tapered_cylinder(shorts_right_root, 0.145 * bulk, 0.178 * bulk, 0.31, Vector3(0.0, 0.155, 0.0), accent, "ShortsRight", 0.90)
+-	shorts_right.scale = Vector3(1.05, 1.0, 0.72)
+-	var waistband := add_box(shorts_waist_root, Vector3(0.49 * bulk, 0.034, 0.29), Vector3(0.0, 0.155, 0.0), jersey_color.lightened(0.04), "Waistband")
+-	waistband.material_override = make_material(jersey_color.lightened(0.04), 0.90)
++	# Lower jersey is slightly wider and looser so it hangs over the waistband instead of hugging the waist.
++	for z in [-0.142, 0.142]:
++		var lower_panel := add_box(jersey_lower_root, Vector3(0.50 * bulk, 0.28, 0.026), Vector3(0.0, 0.080, z), jersey_color, "JerseyLowerPanel")
++		lower_panel.material_override = jersey_mat
++	for side in [-1.0, 1.0]:
++		var lower_side := add_box(jersey_lower_root, Vector3(0.028, 0.275, 0.284), Vector3(side * 0.248 * bulk, 0.080, 0.0), accent.darkened(0.05), "JerseySideStripe")
++		lower_side.material_override = make_material(accent.darkened(0.05), 0.92)
++
++	# Simple V-neck illusion on the front panel.
++	var neck_open := add_box(jersey_upper_root, Vector3(0.15 * bulk, 0.095, 0.030), Vector3(0.0, 0.125, 0.151), skin, "NeckOpening")
++	neck_open.material_override = make_material(skin, 0.66)
++	var chest_trim := add_box(jersey_upper_root, Vector3(0.32 * bulk, 0.020, 0.030), Vector3(0.0, 0.073, 0.153), accent.lightened(0.08), "ChestTrim")
++	chest_trim.material_override = make_material(accent.lightened(0.08), 0.92)
++
++	# Waist section wraps the pelvis; individual short legs follow each thigh for real separation while running.
++	for z in [-0.145, 0.145]:
++		var waist_panel := add_box(shorts_waist_root, Vector3(0.49 * bulk, 0.12, 0.026), Vector3(0.0, 0.110, z), accent, "ShortsWaistPanel")
++		waist_panel.material_override = shorts_mat
++	for side in [-1.0, 1.0]:
++		var waist_side := add_box(shorts_waist_root, Vector3(0.026, 0.12, 0.29), Vector3(side * 0.242 * bulk, 0.110, 0.0), accent, "ShortsWaistSide")
++		waist_side.material_override = shorts_mat
++	var waistband := add_box(shorts_waist_root, Vector3(0.50 * bulk, 0.030, 0.30), Vector3(0.0, 0.168, 0.0), jersey_color.lightened(0.04), "Waistband")
++	waistband.material_override = make_material(jersey_color.lightened(0.04), 0.94)
++
++	for z in [-0.135, 0.135]:
++		var left_panel := add_box(shorts_left_root, Vector3(0.205 * bulk, 0.285, 0.026), Vector3(0.0, 0.155, z), accent, "ShortsLeftPanel")
++		left_panel.material_override = shorts_mat
++		var right_panel := add_box(shorts_right_root, Vector3(0.205 * bulk, 0.285, 0.026), Vector3(0.0, 0.155, z), accent, "ShortsRightPanel")
++		right_panel.material_override = shorts_mat
++	for side in [-1.0, 1.0]:
++		var left_side := add_box(shorts_left_root, Vector3(0.026, 0.28, 0.27), Vector3(side * 0.102 * bulk, 0.155, 0.0), accent, "ShortsLeftSide")
++		left_side.material_override = shorts_mat
++		var right_side := add_box(shorts_right_root, Vector3(0.026, 0.28, 0.27), Vector3(side * 0.102 * bulk, 0.155, 0.0), accent, "ShortsRightSide")
++		right_side.material_override = shorts_mat
++	# Outer-leg strip gives the shorts a deliberate uniform design and makes the split easier to read.
++	var left_stripe := add_box(shorts_left_root, Vector3(0.020, 0.27, 0.285), Vector3(0.112 * bulk, 0.155, 0.0), jersey_color, "ShortsLeftStripe")
++	left_stripe.material_override = make_material(jersey_color, 0.94)
++	var right_stripe := add_box(shorts_right_root, Vector3(0.020, 0.27, 0.285), Vector3(-0.112 * bulk, 0.155, 0.0), jersey_color, "ShortsRightStripe")
++	right_stripe.material_override = make_material(jersey_color, 0.94)
+ 
+ 	# Hair and shoes remain lightweight overlays, but the anatomy underneath is a real skinned character.
+ 	var hair := add_sphere(visual, 0.158, Vector3(0.0, 1.755, -0.006), profile.hair, "HairCap")
