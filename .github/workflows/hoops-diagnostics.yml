@@ -211,12 +211,22 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           p = Path("scripts/main.gd")
-          s = p.read_text()
-          s = s.replace('\\n\t\t\tvar resolved := resolve_animation_name(anim_player, wanted)', '\t\t\tvar resolved := resolve_animation_name(anim_player, wanted)')
-          s = s.replace('\\n\t\t\t# Directional pose correction: travel direction can lead the hips while shoulders stay closer to matchup/rim facing.', '\t\t\t# Directional pose correction: travel direction can lead the hips while shoulders stay closer to matchup/rim facing.')
-          p.write_text(s)
+          lines = p.read_text().splitlines(True)
+          fixed = []
+          stripped = 0
+          for line in lines:
+              if line.startswith("\\n"):
+                  line = line[2:]
+                  stripped += 1
+              fixed.append(line)
+          if stripped != 4:
+              raise SystemExit(f"Expected to strip 4 literal \\n line prefixes, stripped {stripped}")
+          p.write_text("".join(fixed))
           PY
-          ! grep -n '^\\\\n' scripts/main.gd
+          if grep -n '^\\\\n' scripts/main.gd; then
+            echo "Literal backslash-n prefixes remain in main.gd"
+            exit 1
+          fi
 
       - name: Force unmistakable v0.8 build identity
         shell: bash
