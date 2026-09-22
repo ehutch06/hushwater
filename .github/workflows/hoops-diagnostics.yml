@@ -1,4 +1,4 @@
-name: Hoops Legacy v0.9 Broadcast Presentation Windows Validated Build
+name: Hoops Legacy v0.10 Uniform + Court Windows Validated Build
 
 on:
   push:
@@ -298,9 +298,42 @@ jobs:
           PY
           grep -q 'Hoops Legacy v0.9 - PRESENTATION PASS' "$PROJECT_DIR/project.godot"
 
+      - name: Apply v0.10 uniform rig and court tuning
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "88191dfa7480b0a10f87b38350afd1fed0f6d8cc7da7a0d89c9018f14901033f  hoops_diag/v10_uniform_court_patch_gz_b64.txt" | sha256sum -c -
+          base64 -d hoops_diag/v10_uniform_court_patch_gz_b64.txt > hoops_diag/v10.patch.gz
+          gzip -dc hoops_diag/v10.patch.gz > hoops_diag/v10.patch
+          echo "27beb48cdcf65d8802223e9f5ba17fa68c9fead5ec0d6d7c3ce726dd394f97e5  hoops_diag/v10.patch" | sha256sum -c -
+          cd "$PROJECT_DIR"
+          patch -p1 --forward < "$GITHUB_WORKSPACE/hoops_diag/v10.patch"
+          grep -q 'JerseyUpperRoot' scripts/main.gd
+          grep -q 'ShortsLeftRoot' scripts/main.gd
+          grep -q 'Secondary cloth motion' scripts/main.gd
+          grep -q 'lower-contrast broadcast hardwood' scripts/main.gd
+
+      - name: Force unmistakable v0.10 build identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path(os.environ["PROJECT_DIR"])
+          project = root / "project.godot"
+          s = project.read_text().replace('config/name="Hoops Legacy v0.9 - PRESENTATION PASS"', 'config/name="Hoops Legacy v0.10 - UNIFORM + COURT"')
+          project.write_text(s)
+
+          p = root / "scripts" / "main.gd"
+          s = p.read_text()
+          s = s.replace('v0.8 MOTION + CAMERA', 'v0.10 UNIFORM + COURT')
+          p.write_text(s)
+          PY
+          grep -q 'Hoops Legacy v0.10 - UNIFORM + COURT' "$PROJECT_DIR/project.godot"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v09-source-snapshot
+          name: hoops-v10-source-snapshot
           path: ${{ env.PROJECT_DIR }}
           if-no-files-found: error
           compression-level: 6
@@ -319,37 +352,37 @@ jobs:
         run: |
           set -euxo pipefail
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v09.log"
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v09.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v09.log"
+          "$GODOT" --headless --editor --path "$PROJECT_DIR" --quit --log-file "$GITHUB_WORKSPACE/hoops_diag/editor-v10.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call' "$GITHUB_WORKSPACE/hoops_diag/editor-v10.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/editor-v10.log"
             exit 1
           fi
           set +e
-          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v09.log"
+          timeout 12s "$GODOT" --headless --path "$PROJECT_DIR" --log-file "$GITHUB_WORKSPACE/hoops_diag/runtime-v10.log"
           status=$?
           set -e
           if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then exit "$status"; fi
-          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v09.log"; then
-            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v09.log"
+          if grep -qEi 'SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:' "$GITHUB_WORKSPACE/hoops_diag/runtime-v10.log"; then
+            cat "$GITHUB_WORKSPACE/hoops_diag/runtime-v10.log"
             exit 1
           fi
 
-      - name: Render v0.9 visual proof
+      - name: Render v0.10 visual proof
         shell: bash
         run: |
           set -euxo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq xvfb
           GODOT=/tmp/godot/Godot_v4.7.2-stable_linux.x86_64
-          export HOOPS_PREVIEW_PATH="$GITHUB_WORKSPACE/hoops_diag/v09-preview.png"
+          export HOOPS_PREVIEW_PATH="$GITHUB_WORKSPACE/hoops_diag/v10-preview.png"
           timeout 35s xvfb-run -a "$GODOT" --path "$PROJECT_DIR" -- --capture-preview
           test -s "$HOOPS_PREVIEW_PATH"
           file "$HOOPS_PREVIEW_PATH"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v09-visual-proof
-          path: hoops_diag/v09-preview.png
+          name: hoops-v10-visual-proof
+          path: hoops_diag/v10-preview.png
           if-no-files-found: error
           compression-level: 0
 
@@ -383,7 +416,7 @@ jobs:
           export_filter="all_resources"
           include_filter=""
           exclude_filter=""
-          export_path="build/HoopsLegacy-v0.9-PRESENTATION.exe"
+          export_path="build/HoopsLegacy-v0.10-UNIFORM-COURT.exe"
           encryption_include_filters=""
           encryption_exclude_filters=""
           encrypt_pck=false
@@ -405,11 +438,11 @@ jobs:
           application/icon=""
           application/console_wrapper_icon=""
           application/icon_interpolation=4
-          application/file_version="0.9.0.0"
-          application/product_version="0.9.0.0"
+          application/file_version="0.10.0.0"
+          application/product_version="0.10.0.0"
           application/company_name=""
-          application/product_name="Hoops Legacy v0.9 PRESENTATION PASS"
-          application/file_description="Hoops Legacy v0.9 Broadcast Presentation + Motion"
+          application/product_name="Hoops Legacy v0.10 UNIFORM + COURT"
+          application/file_description="Hoops Legacy v0.10 Uniform Rig + Court Tuning"
           application/copyright=""
           application/trademarks=""
           EOF
@@ -422,17 +455,17 @@ jobs:
           BUILD_DIR="$GITHUB_WORKSPACE/hoops_diag/windows-build"
           rm -rf "$BUILD_DIR"
           mkdir -p "$BUILD_DIR"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy-v0.9-PRESENTATION.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v09.log"
-          test -s "$BUILD_DIR/HoopsLegacy-v0.9-PRESENTATION.exe"
-          test -s "$BUILD_DIR/HoopsLegacy-v0.9-PRESENTATION.pck"
-          file "$BUILD_DIR/HoopsLegacy-v0.9-PRESENTATION.exe"
-          sha256sum "$BUILD_DIR/HoopsLegacy-v0.9-PRESENTATION.exe" "$BUILD_DIR/HoopsLegacy-v0.9-PRESENTATION.pck" > "$BUILD_DIR/SHA256SUMS.txt"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Windows Desktop" "$BUILD_DIR/HoopsLegacy-v0.10-UNIFORM-COURT.exe" --log-file "$GITHUB_WORKSPACE/hoops_diag/export-v10.log"
+          test -s "$BUILD_DIR/HoopsLegacy-v0.10-UNIFORM-COURT.exe"
+          test -s "$BUILD_DIR/HoopsLegacy-v0.10-UNIFORM-COURT.pck"
+          file "$BUILD_DIR/HoopsLegacy-v0.10-UNIFORM-COURT.exe"
+          sha256sum "$BUILD_DIR/HoopsLegacy-v0.10-UNIFORM-COURT.exe" "$BUILD_DIR/HoopsLegacy-v0.10-UNIFORM-COURT.pck" > "$BUILD_DIR/SHA256SUMS.txt"
           cat > "$BUILD_DIR/START_HERE.txt" <<'EOF'
-          HOOPS LEGACY v0.9 - PRESENTATION + MOTION
+          HOOPS LEGACY v0.10 - UNIFORM + COURT
 
-          Double-click HoopsLegacy-v0.9-PRESENTATION.exe.
-          The title bar MUST say: Hoops Legacy v0.9 - PRESENTATION PASS
-          Keep HoopsLegacy-v0.9-PRESENTATION.exe and HoopsLegacy-v0.9-PRESENTATION.pck together.
+          Double-click HoopsLegacy-v0.10-UNIFORM-COURT.exe.
+          The title bar MUST say: Hoops Legacy v0.10 - UNIFORM + COURT
+          Keep HoopsLegacy-v0.10-UNIFORM-COURT.exe and HoopsLegacy-v0.10-UNIFORM-COURT.pck together.
 
           Major changes:
           - trajectory-driven movement: desired direction no longer instantly overwrites current momentum
@@ -448,12 +481,17 @@ jobs:
           - smooth look-target damping instead of snapping camera aim
           - dynamic pullback during sprint/transition and subtle push-in on drives/shots
           - calmer broadcast tracking and reduced cheap-looking camera shake
-          - v0.6 skinned player model, MyCareer, dead-ball inbound and progression systems retained
+          - lower-contrast hardwood and calmer arena lighting
+          - wider, more athletic torso scaling by player build
+          - split bone-attached jersey that bends with the spine
+          - baggier split shorts with independent thigh movement
+          - secondary cloth sway on the lower jersey and shorts
+          - v0.9 movement, camera, HUD, MyCareer, inbound and progression systems retained
           EOF
 
       - uses: actions/upload-artifact@v4
         with:
-          name: hoops-v09-windows-candidate
+          name: hoops-v10-windows-candidate
           path: hoops_diag/windows-build/
           if-no-files-found: error
           compression-level: 6
@@ -465,36 +503,36 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: hoops-v09-windows-candidate
+          name: hoops-v10-windows-candidate
           path: build
 
       - name: Verify and launch actual Windows executable
         shell: pwsh
         run: |
           Get-ChildItem build
-          if (-not (Test-Path "build\HoopsLegacy-v0.9-PRESENTATION.exe")) { throw "HoopsLegacy-v0.9-PRESENTATION.exe missing" }
-          if (-not (Test-Path "build\HoopsLegacy-v0.9-PRESENTATION.pck")) { throw "HoopsLegacy-v0.9-PRESENTATION.pck missing" }
-          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy-v0.9-PRESENTATION.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v09.log" -Wait -PassThru
+          if (-not (Test-Path "build\HoopsLegacy-v0.10-UNIFORM-COURT.exe")) { throw "HoopsLegacy-v0.10-UNIFORM-COURT.exe missing" }
+          if (-not (Test-Path "build\HoopsLegacy-v0.10-UNIFORM-COURT.pck")) { throw "HoopsLegacy-v0.10-UNIFORM-COURT.pck missing" }
+          $proc = Start-Process -FilePath "$PWD\build\HoopsLegacy-v0.10-UNIFORM-COURT.exe" -ArgumentList "--headless","--quit-after","180","--log-file","$PWD\build\windows-runtime-v10.log" -Wait -PassThru
           Write-Host "Windows process exit code: $($proc.ExitCode)"
           if ($proc.ExitCode -ne 0) {
-            if (Test-Path "build\windows-runtime-v09.log") { Get-Content "build\windows-runtime-v09.log" }
+            if (Test-Path "build\windows-runtime-v10.log") { Get-Content "build\windows-runtime-v10.log" }
             throw "Windows executable returned non-zero exit code."
           }
-          if (Test-Path "build\windows-runtime-v09.log") {
-            Get-Content "build\windows-runtime-v09.log"
-            $bad = Select-String -Path "build\windows-runtime-v09.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
+          if (Test-Path "build\windows-runtime-v10.log") {
+            Get-Content "build\windows-runtime-v10.log"
+            $bad = Select-String -Path "build\windows-runtime-v10.log" -Pattern "SCRIPT ERROR|Parse Error|Cannot load|Failed to load|Invalid call|ERROR:" -CaseSensitive:$false
             if ($bad) { throw "Godot reported an error during the Windows smoke test." }
           }
 
       - name: Package validated playtest
         shell: pwsh
         run: |
-          Remove-Item "build\windows-runtime-v09.log" -ErrorAction SilentlyContinue
-          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.9-Presentation-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
+          Remove-Item "build\windows-runtime-v10.log" -ErrorAction SilentlyContinue
+          Compress-Archive -Path "build\*" -DestinationPath "HoopsLegacy-v0.10-Uniform-Court-Windows-x64-VALIDATED.zip" -CompressionLevel Optimal
 
       - uses: actions/upload-artifact@v4
         with:
-          name: HoopsLegacy-v0.9-Presentation-Windows-x64-VALIDATED
-          path: HoopsLegacy-v0.9-Presentation-Windows-x64-VALIDATED.zip
+          name: HoopsLegacy-v0.10-Uniform-Court-Windows-x64-VALIDATED
+          path: HoopsLegacy-v0.10-Uniform-Court-Windows-x64-VALIDATED.zip
           if-no-files-found: error
           compression-level: 0
