@@ -30,7 +30,7 @@ jobs:
         run: npm install
 
       - name: Build Windows installer and updater metadata
-        run: npm run dist
+        run: npx electron-builder --win nsis --publish never
 
       - name: Verify updater files exist
         shell: pwsh
