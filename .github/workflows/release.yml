@@ -29,21 +29,59 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Create version tag if needed
+      - name: Build Windows installer and updater metadata
+        run: npm run dist
+
+      - name: Verify updater files exist
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $tag = "v$version"
-          git fetch --tags
-          $existing = git tag -l $tag
-          if (-not $existing) {
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag $tag
-            git push origin $tag
+          $required = @(
+            "dist/Hushwater-Setup-$version.exe",
+            "dist/Hushwater-Setup-$version.exe.blockmap",
+            "dist/latest.yml"
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) {
+              throw "Missing required release asset: $file"
+            }
           }
 
-      - name: Build and publish Windows installer
+      - name: Create or repair GitHub release
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run publish
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = "v$version"
+          $installer = "dist/Hushwater-Setup-$version.exe"
+          $blockmap = "dist/Hushwater-Setup-$version.exe.blockmap"
+          $latest = "dist/latest.yml"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists. Repairing/updating its assets."
+            gh release upload $tag $installer $blockmap $latest --clobber
+          } else {
+            Write-Host "Creating release $tag with all updater assets."
+            gh release create $tag $installer $blockmap $latest --target "$env:GITHUB_SHA" --title $version --notes "Hushwater $version"
+          }
+
+      - name: Verify published release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = "v$version"
+          $assets = gh release view $tag --json assets --jq ".assets[].name"
+          $required = @(
+            "Hushwater-Setup-$version.exe",
+            "Hushwater-Setup-$version.exe.blockmap",
+            "latest.yml"
+          )
+          foreach ($name in $required) {
+            if ($assets -notcontains $name) {
+              throw "Release $tag is missing $name"
+            }
+          }
