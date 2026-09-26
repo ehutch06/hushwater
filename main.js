@@ -3,8 +3,10 @@ const path = require('path');
 const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
+let lastUpdateStatus = { state: 'idle' };
 
 function send(channel, payload) {
+  if (channel === 'update-status') lastUpdateStatus = payload;
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
 }
 
@@ -47,6 +49,7 @@ app.whenReady().then(() => {
   autoUpdater.on('error', err => send('update-status', { state: 'error', message: err.message }));
 
   ipcMain.handle('update-check', () => autoUpdater.checkForUpdates());
+  ipcMain.handle('update-status-current', () => lastUpdateStatus);
   ipcMain.handle('update-download', () => autoUpdater.downloadUpdate());
   ipcMain.handle('update-install', () => autoUpdater.quitAndInstall(false, true));
   ipcMain.handle('app-version', () => app.getVersion());
