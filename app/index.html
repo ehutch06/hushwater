@@ -1378,13 +1378,14 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
   root.style.display = 'flex';
   let mode = 'idle';
   api.getVersion().then(v => { text.textContent = `HUSHWATER v${v}`; }).catch(() => {});
+  api.getUpdateStatus?.().then(status => { if (status && status.state && status.state !== 'idle') applyUpdateStatus(status); }).catch(() => {});
   check.addEventListener('click', () => api.checkForUpdates().catch(() => {}));
   action.addEventListener('click', () => {
     if (mode === 'available') api.downloadUpdate().catch(() => {});
     else if (mode === 'ready') api.installUpdate().catch(() => {});
   });
   const setRequired = required => { root.classList.toggle('updateRequired', required); document.body.classList.toggle('updateLocked', required); };
-  api.onUpdateStatus(status => {
+  const applyUpdateStatus = status => {
     progress.style.display = 'none'; action.style.display = 'none'; check.style.display = 'none';
     if (status.state === 'checking') text.textContent = 'CHECKING FOR UPDATE…';
     else if (status.state === 'current') { setRequired(false); text.textContent = 'HUSHWATER IS UP TO DATE'; check.style.display='inline-block'; }
@@ -1392,7 +1393,9 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
     else if (status.state === 'downloading') { setRequired(true); text.textContent=`DOWNLOADING UPDATE · ${Math.round(status.percent || 0)}%`; progress.style.display='block'; bar.style.width=`${Math.max(0,Math.min(100,status.percent||0))}%`; }
     else if (status.state === 'ready') { setRequired(true); mode='ready'; text.textContent=`v${status.version} IS READY`; action.textContent='RESTART & UPDATE'; action.style.display='inline-block'; }
     else if (status.state === 'error') { text.textContent='UPDATE CHECK FAILED'; check.style.display='inline-block'; }
-  });
+  };
+  api.onUpdateStatus(applyUpdateStatus);
+  setTimeout(() => api.checkForUpdates().catch(() => {}), 500);
 })();
 </script>
 
