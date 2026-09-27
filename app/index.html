@@ -485,40 +485,60 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
   function makeShoreFoam(x,z,r){const ring=new T.Mesh(new T.TorusGeometry(r,.22,5,96),material(0xc3e7de,{transparent:true,opacity:.48,emissive:0x4c9da9,emissiveIntensity:.12,depthWrite:false}));ring.rotation.x=-Math.PI/2;ring.position.set(x,-.12,z);scene.add(ring);shoreFoam.push(ring);}
   function makeHut(parent,x,z,rot,color,index,scale=1) {
     const g=new T.Group();g.position.set(x,0,z);g.rotation.y=-rot;parent.add(g);
-    // Give the homes a little more breathing room. The expanded footprint is
-    // mirrored by SOLID_RECTS above so the visual walls and collision walls
-    // agree.
-    const w=5.8*scale,d=4.8*scale;
-    box(g,0xc9ad7f,0,.08,0,w,.12,d);
-    box(g,0xb99572,0,.75*scale,-d/2,w,1.5*scale,.18);
-    box(g,0xb99572,-w/2,.75*scale,0,.18,1.5*scale,d);
-    box(g,0xb99572,w/2,.75*scale,0,.18,1.5*scale,d);
-    // Split front wall leaves a real visual doorway for the walk-through huts.
-    box(g,0xb99572,-w*.36,.75*scale,d/2,w*.28,1.5*scale,.18);
-    box(g,0xb99572,w*.36,.75*scale,d/2,w*.28,1.5*scale,.18);
-    const ceiling=box(g,0xd8bc8e,0,1.55*scale,0,w-.28,.18*scale,d-.28);
-    const roof=cone(g,color,0,3.05*scale,0,3.4*scale,2.2*scale,4);roof.rotation.y=Math.PI/4;
-    // A little trim, porch, and an ajar door make each home read as a place,
-    // not a solid block from a distance.
-    const doorPanel=box(g,0x674637,.38*scale,.75*scale,d/2+.14,.78*scale,1.28*scale,.12);doorPanel.rotation.y=-.22;
-    box(g,0xe6cb9a,.03*scale,.83*scale,d/2+.12,.09*scale,.09*scale,.08);
-    box(g,0x9b7457,0,.12*scale,d/2+.66*scale,w*.64,.16*scale,1.08*scale);
-    for(const px of[-w*.27,w*.27]) cylinder(g,0x765441,px,.83*scale,d/2+.94*scale,.07*scale,.09*scale,1.55*scale,7);
-    for(const px of[-1.55*scale,1.55*scale]) {
+    const variant=((Math.floor(Number(index)||0)%4)+4)%4;
+    const dims=[
+      {w:5.8,d:4.8,h:1.5,type:'cedar'},
+      {w:5.25,d:5.35,h:1.9,type:'gable'},
+      {w:6.35,d:4.45,h:1.35,type:'porch'},
+      {w:5.45,d:5.05,h:1.6,type:'tower'}
+    ][variant];
+    const w=dims.w*scale,d=dims.d*scale,wallH=dims.h*scale;
+    const wallColor=[0xb99572,0x8f9f86,0xa97862,0x8794aa][variant],trimColor=[0xe6cb9a,0xd8ead5,0xf1c290,0xc9c7ec][variant],woodColor=[0x765441,0x5d6658,0x714e43,0x55556f][variant];
+    box(g,variant===1?0xa8a879:variant===2?0xd0a36f:0xc9ad7f,0,.08,0,w,.12,d);
+    box(g,wallColor,0,wallH/2,-d/2,w,wallH,.18);
+    box(g,wallColor,-w/2,wallH/2,0,.18,wallH,d);
+    box(g,wallColor,w/2,wallH/2,0,.18,wallH,d);
+    box(g,wallColor,-w*.36,wallH/2,d/2,w*.28,wallH,.18);
+    box(g,wallColor,w*.36,wallH/2,d/2,w*.28,wallH,.18);
+    const ceiling=box(g,trimColor,0,wallH+.07*scale,0,w-.28,.15*scale,d-.28);
+    let roof=null;
+    if(variant===0){
+      roof=cone(g,color,0,3.05*scale,0,3.4*scale,2.2*scale,4);roof.rotation.y=Math.PI/4;
+      box(g,woodColor,w*.22,2.18*scale,-d*.08,.34*scale,.72*scale,.34*scale);
+    }else if(variant===1){
+      const roofL=box(g,color,-w*.24,2.6*scale,0,w*.58,.16*scale,d*1.16);roofL.rotation.z=.52;
+      const roofR=box(g,color,w*.24,2.6*scale,0,w*.58,.16*scale,d*1.16);roofR.rotation.z=-.52;
+      roof=new T.Group();roof.add(roofL,roofR);g.add(roof);
+      const dormer=box(g,trimColor,0,2.42*scale,d*.18,1.15*scale,.86*scale,.74*scale);const littleRoof=box(g,color,0,2.92*scale,d*.18,1.42*scale,.12*scale,.92*scale);littleRoof.rotation.z=.08;
+    }else if(variant===2){
+      roof=box(g,color,0,2.35*scale,-.12*scale,w*1.08,.18*scale,d*1.12);roof.rotation.z=.04;
+      box(g,trimColor,0,2.5*scale,d*.26,w*.74,.14*scale,.52*scale);
+      const awning=box(g,0xe6cb9a,0,1.72*scale,d/2+.62*scale,w*.72,.11*scale,1.18*scale);awning.rotation.x=-.08;
+      for(const px of[-w*.28,w*.28])cylinder(g,woodColor,px,.85*scale,d/2+.92*scale,.075*scale,.09*scale,1.7*scale,7);
+    }else{
+      const baseRoof=cone(g,color,0,2.86*scale,0,3.28*scale,1.72*scale,6);roof=baseRoof;
+      const tower=new T.Group();tower.position.set(w*.29,1.55*scale,-d*.12);g.add(tower);
+      cylinder(tower,wallColor,0,.62*scale,0,.92*scale,.92*scale,1.24*scale,10);
+      const cap=cone(tower,trimColor,0,1.65*scale,0,1.16*scale,.9*scale,8);
+      for(const zoff of[-.45,.45])box(g,trimColor,-w*.38,1.0*scale,zoff*scale,.1*scale,.78*scale,.56*scale);
+    }
+    const doorPanel=box(g,woodColor,.38*scale,.72*scale,d/2+.14,.78*scale,1.3*scale,.12);doorPanel.rotation.y=-.22;
+    box(g,trimColor,.03*scale,.83*scale,d/2+.12,.09*scale,.09*scale,.08);
+    const porchDepth=variant===2?1.48:1.08;
+    box(g,woodColor,0,.12*scale,d/2+.66*scale,w*(variant===2?.82:.64),.16*scale,porchDepth*scale);
+    const windowXs=variant===1?[-1.35*scale,1.35*scale]:variant===3?[-1.25*scale]:[-1.55*scale,1.55*scale];
+    for(const px of windowXs){
       box(g,0x87b3ad,px,1.08*scale,d/2+.05,.7*scale,.65*scale,.1);
       box(g,0xd6e8d1,px,1.08*scale,d/2+.12,.06*scale,.62*scale,.05);
       box(g,0xd6e8d1,px,1.08*scale,d/2+.13,.68*scale,.06*scale,.05);
-      box(g,0x765441,px,0.72*scale,d/2+.12,.82*scale,.18*scale,.16);
+      box(g,woodColor,px,.72*scale,d/2+.12,.82*scale,.18*scale,.16);
     }
-    // Tiny chimney and warm lamp give the silhouettes some evening character.
-    box(g,0x765b55,w*.22,2.18*scale,-d*.08,.34*scale,.72*scale,.34*scale);
-    cylinder(g,0xffbc68,-1.8*scale,2.15*scale,d/2-.28,.12*scale,.12*scale,.35*scale,8,{emissive:0xff9f45,emissiveIntensity:.5});
-    if(index===0)box(g,0xe6cb9a,0,1.2*scale,d/2+.1,.5*scale,.9*scale,.16);
-    const rug=box(g,0x789c8f,0,.15,-.15,1.6*scale,.035,1.9*scale);rug.rotation.y=.2;
-    // The exterior keeps the same little low-poly silhouette, but the room
-    // you enter is a separate, oversized top-down set. That lets a doorway
-    // feel like a real scene transition instead of a camera clipping trick.
-    const houseData={roof,ceiling,doorPanel,worldX:(parent.position?.x||0)+x,worldZ:(parent.position?.z||0)+z,rot,hw:w/2,hz:d/2,scale,color,index,interior:null,interiorW:14.2*scale,interiorD:11.6*scale,interiorDoor:1.3*scale,homeStyle:{floor:'tide',walls:'tide',roof:'cedar',furniture:'meadow'},homeLayout:{}};
+    if(variant===1){for(const side of[-1,1]){const planter=box(g,0x6d4a45,side*w*.34,.38*scale,d/2+.72*scale,.82*scale,.34*scale,.42*scale);for(let i=0;i<3;i++)cone(g,0x6fa06e,side*w*.34+(i-1)*.18*scale,.72*scale,d/2+.72*scale,.11*scale,.42*scale,5);}}
+    if(variant===2){for(const px of[-w*.38,w*.38])box(g,trimColor,px,1.36*scale,-d*.48,.34*scale,1.12*scale,.22*scale);}
+    if(variant===3){cylinder(g,0xffbc68,-w*.31,2.15*scale,d/2-.24,.12*scale,.12*scale,.35*scale,8,{emissive:0xff9f45,emissiveIntensity:.5});}
+    else cylinder(g,0xffbc68,-w*.31,2.02*scale,d/2-.28,.12*scale,.12*scale,.35*scale,8,{emissive:0xff9f45,emissiveIntensity:.5});
+    const rug=box(g,[0x789c8f,0x8b8f6a,0x9b7868,0x6e7399][variant],0,.15,-.15,1.6*scale,.035,1.9*scale);rug.rotation.y=.2;
+    const houseData={roof,ceiling,doorPanel,worldX:(parent.position?.x||0)+x,worldZ:(parent.position?.z||0)+z,rot,hw:w/2,hz:d/2,scale,color,index,variant,interior:null,interiorW:14.2*scale,interiorD:11.6*scale,interiorDoor:1.3*scale,homeStyle:{floor:'tide',walls:'tide',roof:'cedar',furniture:'meadow'},homeLayout:{}};
     g.userData.house=houseData;houses.push(g);
     houseData.interior=makeHouseInterior(houseData,color,index,scale);
     houseData.loftInterior=makeHouseLoft(houseData,color,index,scale);
@@ -553,7 +573,24 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
     for(let i=0;i<7;i++){const step=box(room,i%2?0xb87958:0xd49a67,(2.4-i*.2)*scale,.14+i*.16,1.55-i*.22*scale,.72*scale,.14,.48*scale);step.rotation.y=-.06;}d.loftStairsLocal={x:1.8*scale,z:.35*scale};
     const lamp=new T.PointLight(0xffc58a,1.35,11,2);lamp.position.set(0,2.15,0);room.add(lamp);const plaque=nameSprite('UPSTAIRS NOOK · STAIRS DOWN',0xffe5ad);plaque.position.set(0,2.0,-h/2+.18);plaque.scale.set(4.3,.48,1);room.add(plaque);room.visible=false;room.userData.houseLoft=true;scene.add(room);return room;
   }
-  function makeChest(def) { const g=new T.Group(); g.position.set(def.x,0,def.z); g.scale.setScalar(1.14); box(g,0x5d473f,0,.42,0,1.82,.72,1.22); for(const x of[-.72,.72])box(g,0x9f7557,x,.45,0,.14,.78,1.27); for(const z of[-.48,.48])box(g,0x805d49,0,.47,z,1.86,.12,.14); const lid=box(g,0x7b5949,0,.91,-.02,1.94,.2,1.3); const curved=new T.Mesh(new T.CylinderGeometry(.65,.65,1.92,10,1,false,0,Math.PI),material(0x8f6750));curved.rotation.z=Math.PI/2;curved.rotation.y=Math.PI/2;curved.position.set(0,.91,-.01);g.add(curved); box(g,0xd7b56f,0,.68,.65,.22,.34,.09); box(g,0x9de1d0,0,.77,.7,.09,.13,.045,{emissive:0x477f78,emissiveIntensity:.45}); for(const x of[-.66,.66])cylinder(g,0xd7b56f,x,.91,.63,.045,.045,.12,8); const charm=new T.Mesh(new T.OctahedronGeometry(.09,0),material(0xffe5ad,{emissive:0x7f5f35,emissiveIntensity:.35}));charm.position.set(0,1.08,.67);g.add(charm); const c={...def,group:g,lid,open:false,items:{...(def.items||{})}}; g.userData.chest=c; worldGroup.add(g); chests.push(c); return c; }
+  function makeChest(def) {
+    const g=new T.Group();g.position.set(def.x,0,def.z);g.scale.setScalar(1.08);
+    const body=new T.Group();g.add(body);
+    box(body,0x67483b,0,.38,0,1.72,.66,1.04);
+    box(body,0x8b654b,0,.7,0,1.76,.12,1.08);
+    for(const x of[-.72,.72])box(body,0x3f3a37,x,.42,0,.11,.72,1.1);
+    for(const z of[-.43,.43])box(body,0x3f3a37,0,.43,z,1.78,.09,.11);
+    const lid=new T.Group();lid.position.set(0,.77,-.46);body.add(lid);
+    box(lid,0x8f6b50,0,.16,.46,1.86,.24,1.02);
+    box(lid,0xa47a59,0,.32,.46,1.68,.11,.9);
+    for(const x of[-.72,.72])box(lid,0x3f3a37,x,.23,.46,.11,.35,1.04);
+    for(const z of[.08,.84])box(lid,0x3f3a37,0,.24,z,1.88,.08,.1);
+    const latch=box(body,0xd8b96f,0,.57,.57,.24,.34,.08);
+    box(body,0x4f7f78,0,.59,.625,.1,.13,.035,{emissive:0x285d58,emissiveIntensity:.45});
+    const hingeL=cylinder(body,0x3b3836,-.48,.79,-.54,.045,.045,.22,8),hingeR=cylinder(body,0x3b3836,.48,.79,-.54,.045,.045,.22,8);hingeL.rotation.z=hingeR.rotation.z=Math.PI/2;
+    const footY=.08;for(const x of[-.68,.68])for(const z of[-.38,.38])box(body,0x4b3a32,x,footY,z,.16,.16,.16);
+    const c={...def,group:g,lid,open:false,items:{...(def.items||{})}};g.userData.chest=c;worldGroup.add(g);chests.push(c);return c;
+  }
   function makeVillage() { const g=new T.Group();g.position.set(-37,0,28);worldGroup.add(g);villageGroup=g;for(const [x,z,r,col,s] of [[0,0,0,0x8e9dc0,1.22],[15,4,.2,0x9a7ab0,1.3],[-14,13,-.15,0x789c8f,1.18],[7,-17,.4,0xb07864,1.34],[-34,28,.12,0x8e9dc0,1.5]])makeHut(g,x,z,r,col,Math.round(x+z),s);box(g,0xc4ad7b,0,.08,0,11,.08,11);cylinder(g,0x7b6552,0,.8,0,.55,.7,1.4,8);box(g,0x765441,0,1.2,10,4,.12,.18);box(g,0xe8c98d,0,1.75,9.93,3,.8,.08);cylinder(g,0xffbc68,0,2.15,9.85,.12,.12,.35,8,{emissive:0xff8d46,emissiveIntensity:.7});for(const d of CHEST_DEFS)makeChest(d);for(const d of BED_DEFS)makeBed(d); }
   function makeSettlement(def){
     const g=new T.Group();g.position.set(def.x,0,def.z);worldGroup.add(g);
@@ -1406,7 +1443,7 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
   const bar = progress.querySelector('i');
   root.style.display = 'flex';
   let mode = 'idle';
-  api.getVersion().then(v => { text.textContent = `HUSHWATER v${v}`; const seen=localStorage.getItem('hushwater.lastSeenVersion'); if(seen!==v){ const log=document.getElementById('updateLog'),items=document.getElementById('updateLogItems'),version=document.getElementById('updateLogVersion'); const changes=['House customization now includes real furniture arranging: move and rotate the rug, bed, table, shelf, and cabinet, with positions saved per cottage.','Sep 27 field notes pass: first-person eye height now matches the character better, chests and berry bushes block movement, and the ocean dock guide is actually at the dock.','Outer-island trees, reeds, rocks, berries, sticks, and pebbles are now real gatherable resource nodes instead of decorative lookalikes.','Player cottages now count as warm shelter and include a visible fireplace, so warmth recovers indoors instead of draining.','Brine lurkers now have a smaller chase/attack range, a first-attack grace period, lower damage, and longer recovery between lunges.','First-person gathering automatically uses the correct owned axe/pickaxe; you do not need that tool selected on the hotbar.','Fishing now has a timing minigame and island-specific fish species recorded in your fishing journal.','Island dogs now use short, long, and tall body/leg proportions instead of sharing one body shape.','Added the Quest Book: press Q or use QUESTS to see the long-term objective, active requests, locked requests, completed work, island/quest totals, and Grind rank.','Active village requests can now be pinned from the Quest Book; the ground guide trail follows the pinned quest instead of choosing for you.','Optimized the quest guide trail so terrain/path calculations update at a lower cadence instead of every rendered frame, reducing avoidable lag while keeping the trail responsive.','Player Cottages are permanent homes with a retro interior, permanent respawn bed, and floor, wall, roof, and furniture customization.','Mossglass, Ember, Starfall, and Snowcap now have remote villages, houses, pixel-style treasure chests, and unique villagers with quests.','Island-themed furniture sets unlock as you discover each distant shore.','Fishing now works only from the safe ocean dock, as intended.','Added more visible seashells across the home beach.','Fixed grass growing through terrain mounds and player homes.','Fixed the missing-looking cottage door, roof presentation, porch chest overlap, and house collision trouble.','Crafted planks remain in your inventory until you choose a floor, wall, roof, or cottage placement.','First-person mode remains fully interactive: aim, gather, use tools, fish, talk, open chests, and enter homes.']; items.innerHTML=''; for(const change of changes){const li=document.createElement('li');li.textContent=change;items.appendChild(li);} version.textContent=`HUSHWATER v${v} · UPDATE LOG`; log.classList.remove('hidden'); document.getElementById('updateLogClose').onclick=()=>{localStorage.setItem('hushwater.lastSeenVersion',v);log.classList.add('hidden');}; } }).catch(() => {});
+  api.getVersion().then(v => { text.textContent = `HUSHWATER v${v}`; const seen=localStorage.getItem('hushwater.lastSeenVersion'); if(seen!==v){ const log=document.getElementById('updateLog'),items=document.getElementById('updateLogItems'),version=document.getElementById('updateLogVersion'); const changes=['House models were rebuilt into multiple distinct silhouettes instead of recolors of the same cottage: cedar cottage, tall gable home, wide porch house, and tower-roof home.','The chest model was rebuilt from clean low-poly panels with a proper hinged lid, bands, latch, hinges, and feet; the broken half-cylinder lid is gone.','House customization now includes real furniture arranging: move and rotate the rug, bed, table, shelf, and cabinet, with positions saved per cottage.','Sep 27 field notes pass: first-person eye height now matches the character better, chests and berry bushes block movement, and the ocean dock guide is actually at the dock.','Outer-island trees, reeds, rocks, berries, sticks, and pebbles are now real gatherable resource nodes instead of decorative lookalikes.','Player cottages now count as warm shelter and include a visible fireplace, so warmth recovers indoors instead of draining.','Brine lurkers now have a smaller chase/attack range, a first-attack grace period, lower damage, and longer recovery between lunges.','First-person gathering automatically uses the correct owned axe/pickaxe; you do not need that tool selected on the hotbar.','Fishing now has a timing minigame and island-specific fish species recorded in your fishing journal.','Island dogs now use short, long, and tall body/leg proportions instead of sharing one body shape.','Added the Quest Book: press Q or use QUESTS to see the long-term objective, active requests, locked requests, completed work, island/quest totals, and Grind rank.','Active village requests can now be pinned from the Quest Book; the ground guide trail follows the pinned quest instead of choosing for you.','Optimized the quest guide trail so terrain/path calculations update at a lower cadence instead of every rendered frame, reducing avoidable lag while keeping the trail responsive.','Player Cottages are permanent homes with a retro interior, permanent respawn bed, and floor, wall, roof, and furniture customization.','Mossglass, Ember, Starfall, and Snowcap now have remote villages, houses, pixel-style treasure chests, and unique villagers with quests.','Island-themed furniture sets unlock as you discover each distant shore.','Fishing now works only from the safe ocean dock, as intended.','Added more visible seashells across the home beach.','Fixed grass growing through terrain mounds and player homes.','Fixed the missing-looking cottage door, roof presentation, porch chest overlap, and house collision trouble.','Crafted planks remain in your inventory until you choose a floor, wall, roof, or cottage placement.','First-person mode remains fully interactive: aim, gather, use tools, fish, talk, open chests, and enter homes.']; items.innerHTML=''; for(const change of changes){const li=document.createElement('li');li.textContent=change;items.appendChild(li);} version.textContent=`HUSHWATER v${v} · UPDATE LOG`; log.classList.remove('hidden'); document.getElementById('updateLogClose').onclick=()=>{localStorage.setItem('hushwater.lastSeenVersion',v);log.classList.add('hidden');}; } }).catch(() => {});
   api.getUpdateStatus?.().then(status => { if (status && status.state && status.state !== 'idle') applyUpdateStatus(status); }).catch(() => {});
   check.addEventListener('click', () => api.checkForUpdates().catch(() => {}));
   action.addEventListener('click', () => {
