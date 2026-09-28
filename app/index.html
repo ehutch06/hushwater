@@ -502,11 +502,11 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
       {w:5.90,d:5.25,h:2.28,porch:1.24,dormer:-1,chimney:-1}
     ][variant];
     const w=dims.w*scale,d=dims.d*scale,wallH=dims.h*scale;
-    const cream=[0xe9dfc9,0xeadfc8,0xe4d7be,0xeee3cf][variant];
+    const cream=[0xf0e6d1,0xeee4cf,0xeadfc9,0xf2e8d6][variant];
     const wood=[0x8b6047,0x7b5946,0x916247,0x805746][variant];
     const darkWood=[0x624536,0x5b4035,0x68483a,0x5a4038][variant];
-    const teal=[0x5f9290,0x5a878b,0x679b95,0x557e86][variant];
-    const tealDark=[0x456f72,0x436a70,0x4d7773,0x3f6269][variant];
+    const teal=[0x6d9f9a,0x679493,0x74a69e,0x638d92][variant];
+    const tealDark=[0x4f7778,0x4d7275,0x587f7b,0x49696f][variant];
     const stone=0xcfc7b8, glow=0xffc66b, leaf=0x77925c, flower=0xf5ebcf;
 
     // Stone footing + warm cream cottage shell.
@@ -529,35 +529,35 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
 
     // Chunky teal gable roof family. All variants share this silhouette language.
     const roof=new T.Group();g.add(roof);
-    const roofY=wallH+.58*scale,roofDepth=d+1.0*scale,roofWidth=w*.61;
+    const roofY=wallH+.50*scale,roofDepth=d+.58*scale,roofWidth=w*.53;
     const roofL=box(roof,teal,-w*.255,roofY,0,roofWidth,.18*scale,roofDepth);roofL.rotation.z=.50;
     const roofR=box(roof,teal,w*.255,roofY,0,roofWidth,.18*scale,roofDepth);roofR.rotation.z=-.50;
     // Layered shingle bands so it reads as the same chunky tiled roof in-game.
     for(let row=0;row<4;row++){
-      const y=wallH+.22*scale+row*.25*scale;
-      const off=w*.35-row*w*.075;
-      const sw=Math.max(.7*scale,w*.18-row*.015*w);
-      const stripL=box(roof,row%2?tealDark:teal,-off,y,.03*scale,sw,.06*scale,roofDepth+.08*scale);stripL.rotation.z=.50;
-      const stripR=box(roof,row%2?tealDark:teal,off,y,.03*scale,sw,.06*scale,roofDepth+.08*scale);stripR.rotation.z=-.50;
+      const y=wallH+.24*scale+row*.22*scale;
+      const off=w*.30-row*w*.064;
+      const sw=Math.max(.62*scale,w*.155-row*.012*w);
+      const stripL=box(roof,row%2?tealDark:teal,-off,y,.03*scale,sw,.045*scale,roofDepth+.04*scale);stripL.rotation.z=.50;
+      const stripR=box(roof,row%2?tealDark:teal,off,y,.03*scale,sw,.045*scale,roofDepth+.04*scale);stripR.rotation.z=-.50;
     }
 
     // Front gable wood trim.
-    const beamL=box(g,wood,-w*.17,wallH+.56*scale,d/2+.16,.16*scale,1.45*scale,.16);beamL.rotation.z=.50;
-    const beamR=box(g,wood,w*.17,wallH+.56*scale,d/2+.16,.16*scale,1.45*scale,.16);beamR.rotation.z=-.50;
+    const beamL=box(g,wood,-w*.15,wallH+.50*scale,d/2+.15,.14*scale,1.24*scale,.14);beamL.rotation.z=.50;
+    const beamR=box(g,wood,w*.15,wallH+.50*scale,d/2+.15,.14*scale,1.24*scale,.14);beamR.rotation.z=-.50;
 
     // Chimney shifts sides between variants.
     const chimneyX=dims.chimney*w*.31;
-    box(g,stone,chimneyX,wallH+1.02*scale,-d*.12,.54*scale,1.50*scale,.54*scale);
-    box(g,0xa96943,chimneyX,wallH+1.83*scale,-d*.12,.68*scale,.28*scale,.68*scale);
+    box(g,stone,chimneyX,wallH+.92*scale,-d*.12,.40*scale,1.18*scale,.40*scale);
+    box(g,0xa96943,chimneyX,wallH+1.56*scale,-d*.12,.52*scale,.22*scale,.52*scale);
 
     // Dormer variants: centered-right, none/tall gable, wide-porch right, or left.
     if(dims.dormer){
       const sx=dims.dormer;
       const dx=sx*w*.23, dz=-d*.03;
-      box(g,cream,dx,wallH+.66*scale,dz,1.15*scale,.98*scale,.84*scale);
-      const dl=box(roof,teal,dx-.28*scale,wallH+1.20*scale,dz,.70*scale,.12*scale,1.02*scale);dl.rotation.z=.52;
-      const dr=box(roof,teal,dx+.28*scale,wallH+1.20*scale,dz,.70*scale,.12*scale,1.02*scale);dr.rotation.z=-.52;
-      box(g,wood,dx,wallH+.66*scale,dz+d*.0+.45*scale,1.24*scale,.13*scale,.12);
+      box(g,cream,dx,wallH+.61*scale,dz,.92*scale,.82*scale,.70*scale);
+      const dl=box(roof,teal,dx-.23*scale,wallH+1.05*scale,dz,.56*scale,.10*scale,.84*scale);dl.rotation.z=.52;
+      const dr=box(roof,teal,dx+.23*scale,wallH+1.05*scale,dz,.56*scale,.10*scale,.84*scale);dr.rotation.z=-.52;
+      box(g,wood,dx,wallH+.61*scale,dz+.38*scale,1.02*scale,.11*scale,.10);
       const win=box(g,glow,dx,wallH+.70*scale,dz+.45*scale,.50*scale,.52*scale,.06,{emissive:0xff9b43,emissiveIntensity:.58});
       box(g,wood,dx,wallH+.70*scale,dz+.49*scale,.07*scale,.56*scale,.04);
       box(g,wood,dx,wallH+.70*scale,dz+.49*scale,.54*scale,.07*scale,.04);
@@ -588,8 +588,8 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
       box(g,stone,sx*postX,.16*scale,postZ,.30*scale,.30*scale,.30*scale);
     }
     box(g,wood,0,1.92*scale,postZ,porchW,.16*scale,.16*scale);
-    const awningL=box(roof,teal,-porchW*.18,2.10*scale,postZ-.12*scale,porchW*.56,.10*scale,porchD+.26*scale);awningL.rotation.z=.22;
-    const awningR=box(roof,teal,porchW*.18,2.10*scale,postZ-.12*scale,porchW*.56,.10*scale,porchD+.26*scale);awningR.rotation.z=-.22;
+    const awning=box(roof,teal,0,1.98*scale,postZ-.13*scale,porchW*.92,.11*scale,Math.max(.72*scale,porchD*.72));awning.rotation.x=-.08;
+    box(g,tealDark,0,1.90*scale,postZ+.22*scale,porchW*.90,.07*scale,.10*scale);
 
     // Railings and steps.
     if(variant!==1){
@@ -621,7 +621,7 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
       box(g,wood,px,windowY,d/2+.18,.07*scale,.72*scale,.04);
       box(g,wood,px,windowY,d/2+.18,.76*scale,.07*scale,.04);
       for(const sx of[-1,1])box(g,tealDark,px+sx*.49*scale,windowY,d/2+.17,.20*scale,.78*scale,.08);
-      box(g,darkWood,px,windowY-.48*scale,d/2+.27,.92*scale,.20*scale,.28*scale);
+      box(g,darkWood,px,windowY-.46*scale,d/2+.27,1.02*scale,.22*scale,.30*scale);
       for(let i=-2;i<=2;i++){
         const bloom=new T.Mesh(new T.SphereGeometry(.075*scale,6,5),material(flower));
         bloom.position.set(px+i*.15*scale,windowY-.25*scale,d/2+.30);g.add(bloom);
@@ -1620,7 +1620,7 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
   const bar = progress.querySelector('i');
   root.style.display = 'flex';
   let mode = 'idle';
-  api.getVersion().then(v => { const publicVersion=/^1\.2(?:\.|$)/.test(v)?'1.2':v; text.textContent = `HUSHWATER v${publicVersion}`; const seen=localStorage.getItem('hushwater.lastSeenVersion'); if(seen!==v){ const log=document.getElementById('updateLog'),items=document.getElementById('updateLogItems'),version=document.getElementById('updateLogVersion'); const changes=['Village houses were rebuilt as one cohesive Hushwater seaside-cottage family: teal chunky roofs, cream walls, warm timber frames, porches, shutters, glowing windows, flower boxes, chimneys, and four distinct silhouettes based on the approved house preview.','House edit mode is now a compact side panel instead of covering the room; furniture uses a translucent ghost preview with move, rotate, place, and cancel controls.','Furniture collision now follows the furniture’s saved position, fixing invisible blockers left behind after moving shelves, tables, beds, or cabinets.','The quest guideline now runs straight to its target with no decorative wave or curve.','House entry messages now rotate through short cozy welcomes instead of describing the pixel/DS art style.','Villager-house chests now match the cozy chunky pixel look of the interiors and can actually be opened with the normal interact prompt, including while playing online.','Every top-right HUD action now has a quick key: J Home, L Look, F5 Save, F11 Fullscreen, P Pause, alongside the existing I/C/M/Q/G/V controls.','Hushwater is now publicly labeled version 1.2; routine fixes stay under 1.2 until a genuinely major content update earns 1.3.','House geometry pass 2: roofs are now much lower and proportioned to taller walls, giant pyramid roofs are gone, and each silhouette keeps its own compact roof style.','Doors were rebuilt correctly: centered in the doorway, flush with the front wall, closed by default, with a real frame, inset panels, and knob instead of the crooked offset slab.','House priority polish: each village/home silhouette now has stronger unique architecture and detail—exposed beams, dormers/vines, deep porch railings/bench, or tower annex/lantern details—while roof customization now recolors grouped roof pieces correctly.','Rafts were completely rebuilt with twin floats, plank deck, raised bow, rope rails, mast/boom, two-tone sails, crate, paddle, rope coil, and lantern so they fit Hushwater instead of looking like placeholder logs.','House models were rebuilt into multiple distinct silhouettes instead of recolors of the same cottage: cedar cottage, tall gable home, wide porch house, and tower-roof home.','The chest model was rebuilt from clean low-poly panels with a proper hinged lid, bands, latch, hinges, and feet; the broken half-cylinder lid is gone.','House customization now includes real furniture arranging: move and rotate the rug, bed, table, shelf, and cabinet, with positions saved per cottage.','Sep 27 field notes pass: first-person eye height now matches the character better, chests and berry bushes block movement, and the ocean dock guide is actually at the dock.','Outer-island trees, reeds, rocks, berries, sticks, and pebbles are now real gatherable resource nodes instead of decorative lookalikes.','Player cottages now count as warm shelter and include a visible fireplace, so warmth recovers indoors instead of draining.','Brine lurkers now have a smaller chase/attack range, a first-attack grace period, lower damage, and longer recovery between lunges.','First-person gathering automatically uses the correct owned axe/pickaxe; you do not need that tool selected on the hotbar.','Fishing now has a timing minigame and island-specific fish species recorded in your fishing journal.','Island dogs now use short, long, and tall body/leg proportions instead of sharing one body shape.','Added the Quest Book: press Q or use QUESTS to see the long-term objective, active requests, locked requests, completed work, island/quest totals, and Grind rank.','Active village requests can now be pinned from the Quest Book; the ground guide trail follows the pinned quest instead of choosing for you.','Optimized the quest guide trail so terrain/path calculations update at a lower cadence instead of every rendered frame, reducing avoidable lag while keeping the trail responsive.','Player Cottages are permanent homes with a retro interior, permanent respawn bed, and floor, wall, roof, and furniture customization.','Mossglass, Ember, Starfall, and Snowcap now have remote villages, houses, pixel-style treasure chests, and unique villagers with quests.','Island-themed furniture sets unlock as you discover each distant shore.','Fishing now works only from the safe ocean dock, as intended.','Added more visible seashells across the home beach.','Fixed grass growing through terrain mounds and player homes.','Fixed the missing-looking cottage door, roof presentation, porch chest overlap, and house collision trouble.','Crafted planks remain in your inventory until you choose a floor, wall, roof, or cottage placement.','First-person mode remains fully interactive: aim, gather, use tools, fish, talk, open chests, and enter homes.']; items.innerHTML=''; for(const change of changes){const li=document.createElement('li');li.textContent=change;items.appendChild(li);} version.textContent=`HUSHWATER v${publicVersion} · UPDATE LOG`; log.classList.remove('hidden'); document.getElementById('updateLogClose').onclick=()=>{localStorage.setItem('hushwater.lastSeenVersion',v);log.classList.add('hidden');}; } }).catch(() => {});
+  api.getVersion().then(v => { const publicVersion=/^1\.2(?:\.|$)/.test(v)?'1.2':v; text.textContent = `HUSHWATER v${publicVersion}`; const seen=localStorage.getItem('hushwater.lastSeenVersion'); if(seen!==v){ const log=document.getElementById('updateLog'),items=document.getElementById('updateLogItems'),version=document.getElementById('updateLogVersion'); const changes=['House polish hotfix: tightened the main roofs, replaced the broken split porch awnings with compact lean-to canopies, slimmed chimneys/dormers, brightened the cottage palette, and scaled exterior details for better in-game readability.','Village houses were rebuilt as one cohesive Hushwater seaside-cottage family: teal chunky roofs, cream walls, warm timber frames, porches, shutters, glowing windows, flower boxes, chimneys, and four distinct silhouettes based on the approved house preview.','House edit mode is now a compact side panel instead of covering the room; furniture uses a translucent ghost preview with move, rotate, place, and cancel controls.','Furniture collision now follows the furniture’s saved position, fixing invisible blockers left behind after moving shelves, tables, beds, or cabinets.','The quest guideline now runs straight to its target with no decorative wave or curve.','House entry messages now rotate through short cozy welcomes instead of describing the pixel/DS art style.','Villager-house chests now match the cozy chunky pixel look of the interiors and can actually be opened with the normal interact prompt, including while playing online.','Every top-right HUD action now has a quick key: J Home, L Look, F5 Save, F11 Fullscreen, P Pause, alongside the existing I/C/M/Q/G/V controls.','Hushwater is now publicly labeled version 1.2; routine fixes stay under 1.2 until a genuinely major content update earns 1.3.','House geometry pass 2: roofs are now much lower and proportioned to taller walls, giant pyramid roofs are gone, and each silhouette keeps its own compact roof style.','Doors were rebuilt correctly: centered in the doorway, flush with the front wall, closed by default, with a real frame, inset panels, and knob instead of the crooked offset slab.','House priority polish: each village/home silhouette now has stronger unique architecture and detail—exposed beams, dormers/vines, deep porch railings/bench, or tower annex/lantern details—while roof customization now recolors grouped roof pieces correctly.','Rafts were completely rebuilt with twin floats, plank deck, raised bow, rope rails, mast/boom, two-tone sails, crate, paddle, rope coil, and lantern so they fit Hushwater instead of looking like placeholder logs.','House models were rebuilt into multiple distinct silhouettes instead of recolors of the same cottage: cedar cottage, tall gable home, wide porch house, and tower-roof home.','The chest model was rebuilt from clean low-poly panels with a proper hinged lid, bands, latch, hinges, and feet; the broken half-cylinder lid is gone.','House customization now includes real furniture arranging: move and rotate the rug, bed, table, shelf, and cabinet, with positions saved per cottage.','Sep 27 field notes pass: first-person eye height now matches the character better, chests and berry bushes block movement, and the ocean dock guide is actually at the dock.','Outer-island trees, reeds, rocks, berries, sticks, and pebbles are now real gatherable resource nodes instead of decorative lookalikes.','Player cottages now count as warm shelter and include a visible fireplace, so warmth recovers indoors instead of draining.','Brine lurkers now have a smaller chase/attack range, a first-attack grace period, lower damage, and longer recovery between lunges.','First-person gathering automatically uses the correct owned axe/pickaxe; you do not need that tool selected on the hotbar.','Fishing now has a timing minigame and island-specific fish species recorded in your fishing journal.','Island dogs now use short, long, and tall body/leg proportions instead of sharing one body shape.','Added the Quest Book: press Q or use QUESTS to see the long-term objective, active requests, locked requests, completed work, island/quest totals, and Grind rank.','Active village requests can now be pinned from the Quest Book; the ground guide trail follows the pinned quest instead of choosing for you.','Optimized the quest guide trail so terrain/path calculations update at a lower cadence instead of every rendered frame, reducing avoidable lag while keeping the trail responsive.','Player Cottages are permanent homes with a retro interior, permanent respawn bed, and floor, wall, roof, and furniture customization.','Mossglass, Ember, Starfall, and Snowcap now have remote villages, houses, pixel-style treasure chests, and unique villagers with quests.','Island-themed furniture sets unlock as you discover each distant shore.','Fishing now works only from the safe ocean dock, as intended.','Added more visible seashells across the home beach.','Fixed grass growing through terrain mounds and player homes.','Fixed the missing-looking cottage door, roof presentation, porch chest overlap, and house collision trouble.','Crafted planks remain in your inventory until you choose a floor, wall, roof, or cottage placement.','First-person mode remains fully interactive: aim, gather, use tools, fish, talk, open chests, and enter homes.']; items.innerHTML=''; for(const change of changes){const li=document.createElement('li');li.textContent=change;items.appendChild(li);} version.textContent=`HUSHWATER v${publicVersion} · UPDATE LOG`; log.classList.remove('hidden'); document.getElementById('updateLogClose').onclick=()=>{localStorage.setItem('hushwater.lastSeenVersion',v);log.classList.add('hidden');}; } }).catch(() => {});
   api.getUpdateStatus?.().then(status => { if (status && status.state && status.state !== 'idle') applyUpdateStatus(status); }).catch(() => {});
   check.addEventListener('click', () => api.checkForUpdates().catch(() => {}));
   action.addEventListener('click', () => {
