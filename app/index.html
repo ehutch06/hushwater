@@ -495,183 +495,157 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
   function makeHut(parent,x,z,rot,color,index,scale=1,interiorChest=true) {
     const g=new T.Group();g.position.set(x,0,z);g.rotation.y=-rot;parent.add(g);
     const variant=((Math.floor(Number(index)||0)%4)+4)%4;
-    const dims=[
-      {w:6.15,d:5.0,h:2.18,porch:1.30,dormer:1,chimney:1},
-      {w:5.55,d:5.35,h:2.42,porch:1.12,dormer:0,chimney:-1},
-      {w:6.70,d:4.75,h:2.12,porch:1.72,dormer:1,chimney:1},
-      {w:5.90,d:5.25,h:2.28,porch:1.24,dormer:-1,chimney:-1}
+    const cfg=[
+      {w:5.95,d:4.85,h:2.20,porch:3.05,dormer:1,chimney:1},
+      {w:5.45,d:5.10,h:2.38,porch:2.85,dormer:0,chimney:-1},
+      {w:6.45,d:4.70,h:2.16,porch:4.10,dormer:1,chimney:1},
+      {w:5.80,d:5.00,h:2.28,porch:3.15,dormer:-1,chimney:-1}
     ][variant];
-    const w=dims.w*scale,d=dims.d*scale,wallH=dims.h*scale;
+    const w=cfg.w*scale,d=cfg.d*scale,wallH=cfg.h*scale;
     const cream=[0xf0e6d1,0xeee4cf,0xeadfc9,0xf2e8d6][variant];
     const wood=[0x8b6047,0x7b5946,0x916247,0x805746][variant];
     const darkWood=[0x624536,0x5b4035,0x68483a,0x5a4038][variant];
     const teal=[0x6d9f9a,0x679493,0x74a69e,0x638d92][variant];
     const tealDark=[0x4f7778,0x4d7275,0x587f7b,0x49696f][variant];
-    const stone=0xcfc7b8, glow=0xffc66b, leaf=0x77925c, flower=0xf5ebcf;
+    const stone=0xcfc7b8,glow=0xffc66b,leaf=0x77925c,flower=0xf5ebcf;
 
-    // Stone footing + warm cream cottage shell.
+    // Cottage shell.
     box(g,stone,0,.10,0,w+.26,.20,d+.26);
     box(g,cream,0,wallH/2,-d/2,w,wallH,.20);
     box(g,cream,-w/2,wallH/2,0,.20,wallH,d);
     box(g,cream,w/2,wallH/2,0,.20,wallH,d);
 
-    // Front wall wraps a proper centered door.
     const doorW=.94*scale,doorH=1.55*scale,sideW=(w-doorW)/2;
     box(g,cream,-(doorW/2+sideW/2),wallH/2,d/2,sideW,wallH,.20);
     box(g,cream,(doorW/2+sideW/2),wallH/2,d/2,sideW,wallH,.20);
     if(wallH>doorH)box(g,cream,0,doorH+(wallH-doorH)/2,d/2,doorW,wallH-doorH,.20);
     const ceiling=box(g,cream,0,wallH+.04*scale,0,w-.18,.10*scale,d-.18);
 
-    // Big readable timber framing, matching the approved seaside-cottage reference.
+    // Timber frame.
     for(const sx of[-1,1])box(g,wood,sx*(w/2-.16*scale),wallH*.52,d/2+.12,.16*scale,wallH*.94,.15);
     box(g,wood,0,wallH-.10*scale,d/2+.12,w-.26,.16*scale,.15);
     box(g,wood,0,.18*scale,d/2+.12,w-.26,.16*scale,.15);
 
-    // Chunky teal gable roof family. All variants share this silhouette language.
+    // Real gable fill so the upper window is never floating in a black void.
+    const roofSlope=.43,roofOverhang=.26*scale,roofHalf=w/2+roofOverhang,roofRun=roofHalf/Math.cos(roofSlope),roofRise=roofRun*Math.sin(roofSlope),ridgeY=wallH+roofRise;
+    const makeGable=(front=true)=>{
+      const zz=(front?d/2+.105:-d/2-.105),geo=new T.BufferGeometry();
+      geo.setAttribute('position',new T.Float32BufferAttribute([-w/2,wallH,zz,w/2,wallH,zz,0,ridgeY-.06*scale,zz],3));
+      geo.setIndex([0,1,2,2,1,0]);geo.computeVertexNormals();
+      const mesh=new T.Mesh(geo,material(cream));mesh.castShadow=true;mesh.receiveShadow=true;g.add(mesh);return mesh;
+    };
+    makeGable(true);makeGable(false);
+
+    // Stable roof: shingles are children of the sloped roof planes, so they cannot float or shear apart.
     const roof=new T.Group();g.add(roof);
-    const roofY=wallH+.50*scale,roofDepth=d+.58*scale,roofWidth=w*.53;
-    const roofL=box(roof,teal,-w*.255,roofY,0,roofWidth,.18*scale,roofDepth);roofL.rotation.z=.50;
-    const roofR=box(roof,teal,w*.255,roofY,0,roofWidth,.18*scale,roofDepth);roofR.rotation.z=-.50;
-    // Cozy staggered shingles: lots of smaller overlapping tiles instead of big Roblox-like slabs.
-    const shinglePalette=[teal,tealDark,0x7da8a0,0x5f8887];
-    for(let row=0;row<5;row++){
-      const y=wallH+.20*scale+row*.18*scale;
-      const roofSideOffset=w*.275-row*w*.050;
-      const tileW=.46*scale,tileD=.54*scale;
-      const cols=Math.max(6,Math.floor((roofDepth+.28*scale)/tileD)+1);
-      for(const side of[-1,1]){
-        for(let i=0;i<cols;i++){
-          const z=-roofDepth/2+i*tileD+(row%2?tileD*.5:0);
-          if(z>roofDepth/2+.12*scale)continue;
-          const shade=shinglePalette[(i+row+(side>0?1:0))%shinglePalette.length];
-          const tile=box(roof,shade,side*roofSideOffset,y,z,tileW,.055*scale,tileD*.92);
-          tile.rotation.z=side<0?.50:-.50;
-          tile.rotation.y=((i+row)%3-1)*.015;
-        }
+    const roofDepth=d+.52*scale,shinglePalette=[teal,tealDark,0x7ca8a0,0x608b89];
+    const makeRoofSide=(side)=>{
+      const rg=new T.Group(),cx=side*Math.cos(roofSlope)*roofRun*.5,cy=ridgeY-Math.sin(roofSlope)*roofRun*.5;
+      rg.position.set(cx,cy,0);rg.rotation.z=side<0?roofSlope:-roofSlope;roof.add(rg);
+      const base=box(rg,teal,0,0,0,roofRun,.11*scale,roofDepth);base.userData.roofPiece=true;
+      const rows=5,cols=Math.max(7,Math.ceil(roofDepth/(.58*scale))),tileX=roofRun/rows,tileZ=roofDepth/cols;
+      for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+        const tx=-roofRun/2+(r+.5)*tileX,tz=-roofDepth/2+(c+.5)*tileZ+(r%2?tileZ*.18:0);
+        if(tz>roofDepth/2-.05*scale)continue;
+        const tile=box(rg,shinglePalette[(r+c+(side>0?1:0))%shinglePalette.length],tx,.085*scale,tz,tileX*.96,.055*scale,tileZ*.88);
+        tile.userData.roofPiece=true;
       }
-    }
-    // A thicker ridge cap makes the roof feel finished and cottage-like.
-    for(let i=0;i<Math.max(5,Math.floor(roofDepth/(.58*scale)));i++){
-      const z=-roofDepth/2+(i+.5)*(roofDepth/Math.max(5,Math.floor(roofDepth/(.58*scale))));
-      const cap=box(roof,i%2?tealDark:teal,0,wallH+.99*scale,z,.34*scale,.12*scale,.52*scale);
-      cap.rotation.y=(i%2?.012:-.012);
-    }
-
-    // Front gable wood trim.
-    const beamL=box(g,wood,-w*.15,wallH+.50*scale,d/2+.15,.14*scale,1.24*scale,.14);beamL.rotation.z=.50;
-    const beamR=box(g,wood,w*.15,wallH+.50*scale,d/2+.15,.14*scale,1.24*scale,.14);beamR.rotation.z=-.50;
-
-    // Chimney shifts sides between variants.
-    const chimneyX=dims.chimney*w*.31;
-    box(g,stone,chimneyX,wallH+.92*scale,-d*.12,.40*scale,1.18*scale,.40*scale);
-    box(g,0xa96943,chimneyX,wallH+1.56*scale,-d*.12,.52*scale,.22*scale,.52*scale);
-
-    // Dormer variants: centered-right, none/tall gable, wide-porch right, or left.
-    if(dims.dormer){
-      const sx=dims.dormer;
-      const dx=sx*w*.23, dz=-d*.03;
-      box(g,cream,dx,wallH+.61*scale,dz,.92*scale,.82*scale,.70*scale);
-      const dl=box(roof,teal,dx-.23*scale,wallH+1.05*scale,dz,.56*scale,.10*scale,.84*scale);dl.rotation.z=.52;
-      const dr=box(roof,teal,dx+.23*scale,wallH+1.05*scale,dz,.56*scale,.10*scale,.84*scale);dr.rotation.z=-.52;
-      box(g,wood,dx,wallH+.61*scale,dz+.38*scale,1.02*scale,.11*scale,.10);
-      const win=box(g,glow,dx,wallH+.70*scale,dz+.45*scale,.50*scale,.52*scale,.06,{emissive:0xff9b43,emissiveIntensity:.58});
-      box(g,wood,dx,wallH+.70*scale,dz+.49*scale,.07*scale,.56*scale,.04);
-      box(g,wood,dx,wallH+.70*scale,dz+.49*scale,.54*scale,.07*scale,.04);
+      return rg;
+    };
+    makeRoofSide(-1);makeRoofSide(1);
+    const ridgeCount=Math.max(6,Math.ceil(roofDepth/(.55*scale)));
+    for(let i=0;i<ridgeCount;i++){
+      const z0=-roofDepth/2+(i+.5)*(roofDepth/ridgeCount),cap=box(roof,i%2?tealDark:teal,0,ridgeY+.035*scale,z0,.34*scale,.14*scale,roofDepth/ridgeCount*.88);
+      cap.userData.roofPiece=true;
     }
 
-    // Upper front window / gable feature.
-    const upperY=wallH+.42*scale;
+    // Clean front gable trim.
+    const beamLen=roofRun*.70;
+    const beamL=box(g,wood,-Math.cos(roofSlope)*beamLen*.25,wallH+Math.sin(roofSlope)*beamLen*.25,d/2+.15,.13*scale,beamLen,.13*scale);beamL.rotation.z=roofSlope;
+    const beamR=box(g,wood, Math.cos(roofSlope)*beamLen*.25,wallH+Math.sin(roofSlope)*beamLen*.25,d/2+.15,.13*scale,beamLen,.13*scale);beamR.rotation.z=-roofSlope;
+
+    // Slim chimney.
+    const chimneyX=cfg.chimney*w*.31;
+    box(g,stone,chimneyX,wallH+.88*scale,-d*.12,.38*scale,1.08*scale,.38*scale);
+    box(g,0xa96943,chimneyX,wallH+1.47*scale,-d*.12,.50*scale,.22*scale,.50*scale);
+
+    // Dormer, mounted cleanly onto the main roof.
+    if(cfg.dormer){
+      const sx=cfg.dormer,dx=sx*w*.22,dz=-d*.04;
+      box(g,cream,dx,wallH+.58*scale,dz,.86*scale,.74*scale,.64*scale);
+      const dormer=new T.Group();dormer.position.set(dx,wallH+1.00*scale,dz);roof.add(dormer);
+      const dl=box(dormer,teal,-.22*scale,0,0,.54*scale,.09*scale,.76*scale);dl.rotation.z=.52;dl.userData.roofPiece=true;
+      const dr=box(dormer,teal,.22*scale,0,0,.54*scale,.09*scale,.76*scale);dr.rotation.z=-.52;dr.userData.roofPiece=true;
+      box(g,wood,dx,wallH+.58*scale,dz+.34*scale,.94*scale,.10*scale,.10);
+      box(g,glow,dx,wallH+.66*scale,dz+.35*scale,.46*scale,.48*scale,.06,{emissive:0xff9b43,emissiveIntensity:.58});
+      box(g,wood,dx,wallH+.66*scale,dz+.39*scale,.06*scale,.52*scale,.04);
+      box(g,wood,dx,wallH+.66*scale,dz+.39*scale,.50*scale,.06*scale,.04);
+    }
+
+    // Upper gable window + flower box.
+    const upperY=wallH+.43*scale;
     box(g,glow,0,upperY,d/2+.18,.62*scale,.62*scale,.07,{emissive:0xff9b43,emissiveIntensity:.62});
     box(g,wood,0,upperY,d/2+.22,.07*scale,.68*scale,.04);
     box(g,wood,0,upperY,d/2+.22,.68*scale,.07*scale,.04);
     for(const sx of[-1,1])box(g,tealDark,sx*.43*scale,upperY,d/2+.21,.18*scale,.72*scale,.08);
+    box(g,darkWood,0,upperY-.47*scale,d/2+.30,.98*scale,.22*scale,.28*scale);
+    for(let i=-2;i<=2;i++){const bloom=new T.Mesh(new T.SphereGeometry(.082*scale,6,5),material(flower));bloom.position.set(i*.17*scale,upperY-.15*scale,d/2+.34);g.add(bloom);}
 
-    // Flower box under upper window.
-    box(g,darkWood,0,upperY-.47*scale,d/2+.30,.94*scale,.22*scale,.28*scale);
-    for(let i=-2;i<=2;i++){
-      const stem=box(g,leaf,i*.17*scale,upperY-.30*scale,d/2+.32,.11*scale,.28*scale,.10*scale);
-      const bloom=new T.Mesh(new T.SphereGeometry(.085*scale,6,5),material(flower));
-      bloom.position.set(i*.17*scale,upperY-.15*scale,d/2+.34);g.add(bloom);
+    // Compact porch instead of a roof-wide slab.
+    const porchW=cfg.porch*scale,porchD=(variant===2?1.42:1.16)*scale,porchZ=d/2+.62*scale;
+    box(g,stone,0,.14*scale,porchZ,porchW+.16*scale,.20*scale,porchD+.10*scale);
+    box(g,wood,0,.28*scale,porchZ,porchW,.13*scale,porchD);
+    const postX=porchW*.42,postZ=d/2+.94*scale;
+    for(const sx of[-1,1]){box(g,wood,sx*postX,1.03*scale,postZ,.15*scale,1.82*scale,.15*scale);box(g,stone,sx*postX,.16*scale,postZ,.28*scale,.30*scale,.28*scale);}
+    box(g,wood,0,1.90*scale,postZ,porchW,.15*scale,.15*scale);
+
+    const canopy=new T.Group();canopy.position.set(0,1.99*scale,d/2+.80*scale);canopy.rotation.x=-.10;roof.add(canopy);
+    const canopyBase=box(canopy,teal,0,0,0,porchW*.95,.09*scale,.86*scale);canopyBase.userData.roofPiece=true;
+    const canopyCols=Math.max(5,Math.ceil(porchW/(.46*scale)));
+    for(let i=0;i<canopyCols;i++){
+      const tx=-porchW*.45+(i+.5)*(porchW*.90/canopyCols),sh=box(canopy,i%2?tealDark:0x719d98,tx,.065*scale,.02*scale,porchW*.86/canopyCols,.045*scale,.78*scale);
+      sh.userData.roofPiece=true;
     }
 
-    // Front porch: consistent cozy timber porch with variant width/depth.
-    const porchW=w*(variant===2?.86:.68),porchD=dims.porch*scale;
-    box(g,stone,0,.14*scale,d/2+.57*scale,porchW+.18*scale,.20*scale,porchD+.10*scale);
-    box(g,wood,0,.28*scale,d/2+.58*scale,porchW,.13*scale,porchD);
-    const postX=porchW*.42,postZ=d/2+.96*scale;
-    for(const sx of[-1,1]){
-      box(g,wood,sx*postX,1.05*scale,postZ,.16*scale,1.85*scale,.16*scale);
-      box(g,stone,sx*postX,.16*scale,postZ,.30*scale,.30*scale,.30*scale);
-    }
-    box(g,wood,0,1.92*scale,postZ,porchW,.16*scale,.16*scale);
-    const awning=box(roof,teal,0,1.98*scale,postZ-.13*scale,porchW*.92,.10*scale,Math.max(.72*scale,porchD*.72));awning.rotation.x=-.08;
-    for(let i=-3;i<=3;i++){const sh=box(roof,(i%2?tealDark:0x719d98),i*porchW*.12,2.015*scale,postZ+.02*scale,porchW*.13,.045*scale,Math.max(.62*scale,porchD*.64));sh.rotation.x=-.08;}
-    box(g,wood,0,1.90*scale,postZ+.22*scale,porchW*.90,.07*scale,.10*scale);
+    if(variant!==1)for(const sx of[-1,1]){box(g,wood,sx*porchW*.34,.62*scale,d/2+.99*scale,porchW*.20,.09*scale,.09*scale);for(let j=0;j<3;j++)box(g,wood,sx*(porchW*.25+j*.09*scale),.49*scale,d/2+.99*scale,.06*scale,.52*scale,.06*scale);}
+    for(let j=0;j<3;j++)box(g,stone,0,(.08+j*.10)*scale,d/2+(1.08+j*.17)*scale,(1.42-j*.12)*scale,.16*scale,(.34+j*.02)*scale);
 
-    // Railings and steps.
-    if(variant!==1){
-      for(const sx of[-1,1]){
-        box(g,wood,sx*porchW*.34,.63*scale,d/2+.98*scale,porchW*.22,.10*scale,.10*scale);
-        for(let j=0;j<3;j++)box(g,wood,sx*(porchW*.26+j*.10*scale),.50*scale,d/2+.98*scale,.07*scale,.55*scale,.07*scale);
-      }
-    }
-    for(let j=0;j<3;j++)box(g,stone,0,(.08+j*.10)*scale,d/2+(1.08+j*.17)*scale,(1.45-j*.12)*scale,.16*scale,(.34+j*.02)*scale);
-
-    // Door matching the approved preview: teal plank door, warm little window, brass details.
+    // Door.
     const doorFrame=new T.Group();doorFrame.position.set(0,0,d/2+.13);g.add(doorFrame);
     box(doorFrame,wood,-doorW*.60,doorH*.52,0,.15*scale,doorH+.18*scale,.12);
     box(doorFrame,wood,doorW*.60,doorH*.52,0,.15*scale,doorH+.18*scale,.12);
     box(doorFrame,wood,0,doorH+.08*scale,0,doorW*1.35,.16*scale,.12);
     const doorPanel=box(doorFrame,tealDark,0,doorH*.50,.02,doorW,doorH,.11);
     box(doorFrame,glow,0,doorH*.70,.09,doorW*.43,.36*scale,.03,{emissive:0xff9b43,emissiveIntensity:.64});
-    box(doorFrame,wood,0,doorH*.70,.12,.06*scale,.40*scale,.025);
-    box(doorFrame,wood,0,doorH*.70,.12,doorW*.46,.06*scale,.025);
-    const knob=new T.Mesh(new T.SphereGeometry(.055*scale,8,6),material(0xd8b96f,{emissive:0x6f532d,emissiveIntensity:.20}));
-    knob.position.set(doorW*.32,doorH*.49,.12);doorFrame.add(knob);
+    box(doorFrame,wood,0,doorH*.70,.12,.06*scale,.40*scale,.025);box(doorFrame,wood,0,doorH*.70,.12,doorW*.46,.06*scale,.025);
+    const knob=new T.Mesh(new T.SphereGeometry(.055*scale,8,6),material(0xd8b96f,{emissive:0x6f532d,emissiveIntensity:.20}));knob.position.set(doorW*.32,doorH*.49,.12);doorFrame.add(knob);
     const ring=new T.Mesh(new T.TorusGeometry(.095*scale,.022*scale,6,12),material(0xd8b96f));ring.position.set(0,doorH*.40,.125);ring.rotation.x=Math.PI/2;doorFrame.add(ring);
 
-    // Ground-floor glowing windows + shutters. Layout varies but shares the same asset language.
-    const windowY=1.12*scale;
-    const windowXs=variant===1?[-1.42*scale,1.42*scale]:variant===3?[-1.42*scale,1.28*scale]:[-1.55*scale,1.55*scale];
+    // Front windows and flower boxes.
+    const windowY=1.12*scale,windowXs=variant===1?[-1.35*scale,1.35*scale]:[-1.48*scale,1.48*scale];
     for(const px of windowXs){
-      box(g,glow,px,windowY,d/2+.13,.72*scale,.68*scale,.07,{emissive:0xff9b43,emissiveIntensity:.56});
-      box(g,wood,px,windowY,d/2+.18,.07*scale,.72*scale,.04);
-      box(g,wood,px,windowY,d/2+.18,.76*scale,.07*scale,.04);
-      for(const sx of[-1,1])box(g,tealDark,px+sx*.49*scale,windowY,d/2+.17,.20*scale,.78*scale,.08);
-      box(g,darkWood,px,windowY-.46*scale,d/2+.27,1.02*scale,.22*scale,.30*scale);
-      for(let i=-2;i<=2;i++){
-        const bloom=new T.Mesh(new T.SphereGeometry(.075*scale,6,5),material(flower));
-        bloom.position.set(px+i*.15*scale,windowY-.25*scale,d/2+.30);g.add(bloom);
-      }
+      box(g,glow,px,windowY,d/2+.13,.70*scale,.66*scale,.07,{emissive:0xff9b43,emissiveIntensity:.56});
+      box(g,wood,px,windowY,d/2+.18,.07*scale,.70*scale,.04);box(g,wood,px,windowY,d/2+.18,.74*scale,.07*scale,.04);
+      for(const sx of[-1,1])box(g,tealDark,px+sx*.47*scale,windowY,d/2+.17,.19*scale,.76*scale,.08);
+      box(g,darkWood,px,windowY-.46*scale,d/2+.27,.98*scale,.22*scale,.30*scale);
+      for(let i=-2;i<=2;i++){const bloom=new T.Mesh(new T.SphereGeometry(.073*scale,6,5),material(flower));bloom.position.set(px+i*.145*scale,windowY-.25*scale,d/2+.30);g.add(bloom);}
     }
 
-    // Warm porch lantern.
+    // Side windows break up the blank side walls in 3/4 views.
+    for(const sx of[-1,1]){
+      const sideWinZ=-.42*scale;
+      box(g,glow,sx*(w/2+.13),1.05*scale,sideWinZ,.07,.58*scale,.64*scale,{emissive:0xff9b43,emissiveIntensity:.42});
+      box(g,wood,sx*(w/2+.17),1.05*scale,sideWinZ,.04,.06*scale,.68*scale);
+      box(g,wood,sx*(w/2+.17),1.05*scale,sideWinZ,.04,.62*scale,.06*scale);
+    }
+
+    // Lantern and cottage dressing.
     const lanternX=-doorW*.92,lanternY=1.42*scale,lanternZ=d/2+.36;
     box(g,darkWood,lanternX,lanternY+.18*scale,lanternZ,.10*scale,.18*scale,.10*scale);
-    const lamp=new T.Mesh(new T.OctahedronGeometry(.16*scale,0),material(glow,{emissive:0xff8d46,emissiveIntensity:1.0}));
-    lamp.position.set(lanternX,lanternY,lanternZ);g.add(lamp);
-
-    // Cozy cottage props/variation accents.
-    if(variant===0||variant===2){
-      const signPost=new T.Group();signPost.position.set(-porchW*.60,.03,d/2+.72*scale);g.add(signPost);
-      box(signPost,wood,0,.88*scale,0,.12*scale,1.65*scale,.12*scale);
-      box(signPost,wood,.36*scale,1.55*scale,0,.82*scale,.10*scale,.10*scale);
-      const sign=box(signPost,tealDark,.56*scale,1.22*scale,0,.64*scale,.52*scale,.08*scale);
-      const fish=new T.Mesh(new T.OctahedronGeometry(.09*scale,0),material(flower));fish.position.set(.56*scale,1.22*scale,.07*scale);fish.scale.set(2.1,.7,.5);signPost.add(fish);
-    }
-    if(variant===3){
-      box(g,darkWood,w*.36,.38*scale,d/2+.60,.56*scale,.62*scale,.56*scale);
-      cylinder(g,wood,w*.27,.45*scale,d/2+.92,.36*scale,.40*scale,.84*scale,10);
-    }
-    if(variant===1){
-      for(let j=0;j<4;j++){const leafMesh=cone(g,leaf,w*.43,.52*scale+j*.31*scale,d/2+.18,.12*scale,.34*scale,5);leafMesh.rotation.z=.14*Math.sin(j);}
-    }
-
-    // Tiny garden clumps anchor each house into the village.
-    for(const sx of[-1,1]){
-      const bush=new T.Mesh(new T.IcosahedronGeometry(.33*scale,1),material(leaf));bush.position.set(sx*w*.37,.34*scale,d/2+.52*scale);bush.scale.set(1.25,.75,1);g.add(bush);
-      const bloom=new T.Mesh(new T.SphereGeometry(.075*scale,6,5),material(flower));bloom.position.set(sx*w*.37,.60*scale,d/2+.64*scale);g.add(bloom);
-    }
+    const lamp=new T.Mesh(new T.OctahedronGeometry(.16*scale,0),material(glow,{emissive:0xff8d46,emissiveIntensity:1.0}));lamp.position.set(lanternX,lanternY,lanternZ);g.add(lamp);
+    if(variant===0||variant===2){const signPost=new T.Group();signPost.position.set(-porchW*.60,.03,d/2+.72*scale);g.add(signPost);box(signPost,wood,0,.88*scale,0,.12*scale,1.65*scale,.12*scale);box(signPost,wood,.36*scale,1.55*scale,0,.82*scale,.10*scale,.10*scale);box(signPost,tealDark,.56*scale,1.22*scale,0,.64*scale,.52*scale,.08*scale);}
+    if(variant===3){box(g,darkWood,w*.36,.38*scale,d/2+.60,.56*scale,.62*scale,.56*scale);cylinder(g,wood,w*.27,.45*scale,d/2+.92,.34*scale,.38*scale,.78*scale,10);}
+    for(const sx of[-1,1]){const bush=new T.Mesh(new T.IcosahedronGeometry(.33*scale,1),material(leaf));bush.position.set(sx*w*.37,.34*scale,d/2+.52*scale);bush.scale.set(1.25,.75,1);g.add(bush);const bloom=new T.Mesh(new T.SphereGeometry(.075*scale,6,5),material(flower));bloom.position.set(sx*w*.37,.60*scale,d/2+.64*scale);g.add(bloom);}
 
     roof.traverse?.(m=>{if(m.isMesh)m.userData.roofPiece=true;});
     const rug=box(g,variant%2?0x8a9e7a:0x789c8f,0,.15,-.15,1.6*scale,.035,1.9*scale);rug.rotation.y=.2;
@@ -1637,7 +1611,7 @@ body.updateLocked #menu,body.updateLocked #hud,body.updateLocked #pauseScreen{po
   const bar = progress.querySelector('i');
   root.style.display = 'flex';
   let mode = 'idle';
-  api.getVersion().then(v => { const publicVersion=/^1\.2(?:\.|$)/.test(v)?'1.2':v; text.textContent = `HUSHWATER v${publicVersion}`; const seen=localStorage.getItem('hushwater.lastSeenVersion'); if(seen!==v){ const log=document.getElementById('updateLog'),items=document.getElementById('updateLogItems'),version=document.getElementById('updateLogVersion'); const changes=['Roof cozy pass: village cottages now use staggered overlapping teal shingles with subtle color variation and ridge caps, plus a shingled porch canopy, replacing the flat blocky roof look.','House polish hotfix: tightened the main roofs, replaced the broken split porch awnings with compact lean-to canopies, slimmed chimneys/dormers, brightened the cottage palette, and scaled exterior details for better in-game readability.','Village houses were rebuilt as one cohesive Hushwater seaside-cottage family: teal chunky roofs, cream walls, warm timber frames, porches, shutters, glowing windows, flower boxes, chimneys, and four distinct silhouettes based on the approved house preview.','House edit mode is now a compact side panel instead of covering the room; furniture uses a translucent ghost preview with move, rotate, place, and cancel controls.','Furniture collision now follows the furniture’s saved position, fixing invisible blockers left behind after moving shelves, tables, beds, or cabinets.','The quest guideline now runs straight to its target with no decorative wave or curve.','House entry messages now rotate through short cozy welcomes instead of describing the pixel/DS art style.','Villager-house chests now match the cozy chunky pixel look of the interiors and can actually be opened with the normal interact prompt, including while playing online.','Every top-right HUD action now has a quick key: J Home, L Look, F5 Save, F11 Fullscreen, P Pause, alongside the existing I/C/M/Q/G/V controls.','Hushwater is now publicly labeled version 1.2; routine fixes stay under 1.2 until a genuinely major content update earns 1.3.','House geometry pass 2: roofs are now much lower and proportioned to taller walls, giant pyramid roofs are gone, and each silhouette keeps its own compact roof style.','Doors were rebuilt correctly: centered in the doorway, flush with the front wall, closed by default, with a real frame, inset panels, and knob instead of the crooked offset slab.','House priority polish: each village/home silhouette now has stronger unique architecture and detail—exposed beams, dormers/vines, deep porch railings/bench, or tower annex/lantern details—while roof customization now recolors grouped roof pieces correctly.','Rafts were completely rebuilt with twin floats, plank deck, raised bow, rope rails, mast/boom, two-tone sails, crate, paddle, rope coil, and lantern so they fit Hushwater instead of looking like placeholder logs.','House models were rebuilt into multiple distinct silhouettes instead of recolors of the same cottage: cedar cottage, tall gable home, wide porch house, and tower-roof home.','The chest model was rebuilt from clean low-poly panels with a proper hinged lid, bands, latch, hinges, and feet; the broken half-cylinder lid is gone.','House customization now includes real furniture arranging: move and rotate the rug, bed, table, shelf, and cabinet, with positions saved per cottage.','Sep 27 field notes pass: first-person eye height now matches the character better, chests and berry bushes block movement, and the ocean dock guide is actually at the dock.','Outer-island trees, reeds, rocks, berries, sticks, and pebbles are now real gatherable resource nodes instead of decorative lookalikes.','Player cottages now count as warm shelter and include a visible fireplace, so warmth recovers indoors instead of draining.','Brine lurkers now have a smaller chase/attack range, a first-attack grace period, lower damage, and longer recovery between lunges.','First-person gathering automatically uses the correct owned axe/pickaxe; you do not need that tool selected on the hotbar.','Fishing now has a timing minigame and island-specific fish species recorded in your fishing journal.','Island dogs now use short, long, and tall body/leg proportions instead of sharing one body shape.','Added the Quest Book: press Q or use QUESTS to see the long-term objective, active requests, locked requests, completed work, island/quest totals, and Grind rank.','Active village requests can now be pinned from the Quest Book; the ground guide trail follows the pinned quest instead of choosing for you.','Optimized the quest guide trail so terrain/path calculations update at a lower cadence instead of every rendered frame, reducing avoidable lag while keeping the trail responsive.','Player Cottages are permanent homes with a retro interior, permanent respawn bed, and floor, wall, roof, and furniture customization.','Mossglass, Ember, Starfall, and Snowcap now have remote villages, houses, pixel-style treasure chests, and unique villagers with quests.','Island-themed furniture sets unlock as you discover each distant shore.','Fishing now works only from the safe ocean dock, as intended.','Added more visible seashells across the home beach.','Fixed grass growing through terrain mounds and player homes.','Fixed the missing-looking cottage door, roof presentation, porch chest overlap, and house collision trouble.','Crafted planks remain in your inventory until you choose a floor, wall, roof, or cottage placement.','First-person mode remains fully interactive: aim, gather, use tools, fish, talk, open chests, and enter homes.']; items.innerHTML=''; for(const change of changes){const li=document.createElement('li');li.textContent=change;items.appendChild(li);} version.textContent=`HUSHWATER v${publicVersion} · UPDATE LOG`; log.classList.remove('hidden'); document.getElementById('updateLogClose').onclick=()=>{localStorage.setItem('hushwater.lastSeenVersion',v);log.classList.add('hidden');}; } }).catch(() => {});
+  api.getVersion().then(v => { const publicVersion=/^1\.2(?:\.|$)/.test(v)?'1.2':v; text.textContent = `HUSHWATER v${publicVersion}`; const seen=localStorage.getItem('hushwater.lastSeenVersion'); if(seen!==v){ const log=document.getElementById('updateLog'),items=document.getElementById('updateLogItems'),version=document.getElementById('updateLogVersion'); const changes=['House geometry rebuild after in-game playtest: roof shingles now live on the sloped roof planes so they cannot float apart, gable walls are filled, porch roofs are compact, side walls have windows, and roof/chimney proportions were rebuilt for a clean cozy cottage silhouette.','Roof cozy pass: village cottages now use staggered overlapping teal shingles with subtle color variation and ridge caps, plus a shingled porch canopy, replacing the flat blocky roof look.','House polish hotfix: tightened the main roofs, replaced the broken split porch awnings with compact lean-to canopies, slimmed chimneys/dormers, brightened the cottage palette, and scaled exterior details for better in-game readability.','Village houses were rebuilt as one cohesive Hushwater seaside-cottage family: teal chunky roofs, cream walls, warm timber frames, porches, shutters, glowing windows, flower boxes, chimneys, and four distinct silhouettes based on the approved house preview.','House edit mode is now a compact side panel instead of covering the room; furniture uses a translucent ghost preview with move, rotate, place, and cancel controls.','Furniture collision now follows the furniture’s saved position, fixing invisible blockers left behind after moving shelves, tables, beds, or cabinets.','The quest guideline now runs straight to its target with no decorative wave or curve.','House entry messages now rotate through short cozy welcomes instead of describing the pixel/DS art style.','Villager-house chests now match the cozy chunky pixel look of the interiors and can actually be opened with the normal interact prompt, including while playing online.','Every top-right HUD action now has a quick key: J Home, L Look, F5 Save, F11 Fullscreen, P Pause, alongside the existing I/C/M/Q/G/V controls.','Hushwater is now publicly labeled version 1.2; routine fixes stay under 1.2 until a genuinely major content update earns 1.3.','House geometry pass 2: roofs are now much lower and proportioned to taller walls, giant pyramid roofs are gone, and each silhouette keeps its own compact roof style.','Doors were rebuilt correctly: centered in the doorway, flush with the front wall, closed by default, with a real frame, inset panels, and knob instead of the crooked offset slab.','House priority polish: each village/home silhouette now has stronger unique architecture and detail—exposed beams, dormers/vines, deep porch railings/bench, or tower annex/lantern details—while roof customization now recolors grouped roof pieces correctly.','Rafts were completely rebuilt with twin floats, plank deck, raised bow, rope rails, mast/boom, two-tone sails, crate, paddle, rope coil, and lantern so they fit Hushwater instead of looking like placeholder logs.','House models were rebuilt into multiple distinct silhouettes instead of recolors of the same cottage: cedar cottage, tall gable home, wide porch house, and tower-roof home.','The chest model was rebuilt from clean low-poly panels with a proper hinged lid, bands, latch, hinges, and feet; the broken half-cylinder lid is gone.','House customization now includes real furniture arranging: move and rotate the rug, bed, table, shelf, and cabinet, with positions saved per cottage.','Sep 27 field notes pass: first-person eye height now matches the character better, chests and berry bushes block movement, and the ocean dock guide is actually at the dock.','Outer-island trees, reeds, rocks, berries, sticks, and pebbles are now real gatherable resource nodes instead of decorative lookalikes.','Player cottages now count as warm shelter and include a visible fireplace, so warmth recovers indoors instead of draining.','Brine lurkers now have a smaller chase/attack range, a first-attack grace period, lower damage, and longer recovery between lunges.','First-person gathering automatically uses the correct owned axe/pickaxe; you do not need that tool selected on the hotbar.','Fishing now has a timing minigame and island-specific fish species recorded in your fishing journal.','Island dogs now use short, long, and tall body/leg proportions instead of sharing one body shape.','Added the Quest Book: press Q or use QUESTS to see the long-term objective, active requests, locked requests, completed work, island/quest totals, and Grind rank.','Active village requests can now be pinned from the Quest Book; the ground guide trail follows the pinned quest instead of choosing for you.','Optimized the quest guide trail so terrain/path calculations update at a lower cadence instead of every rendered frame, reducing avoidable lag while keeping the trail responsive.','Player Cottages are permanent homes with a retro interior, permanent respawn bed, and floor, wall, roof, and furniture customization.','Mossglass, Ember, Starfall, and Snowcap now have remote villages, houses, pixel-style treasure chests, and unique villagers with quests.','Island-themed furniture sets unlock as you discover each distant shore.','Fishing now works only from the safe ocean dock, as intended.','Added more visible seashells across the home beach.','Fixed grass growing through terrain mounds and player homes.','Fixed the missing-looking cottage door, roof presentation, porch chest overlap, and house collision trouble.','Crafted planks remain in your inventory until you choose a floor, wall, roof, or cottage placement.','First-person mode remains fully interactive: aim, gather, use tools, fish, talk, open chests, and enter homes.']; items.innerHTML=''; for(const change of changes){const li=document.createElement('li');li.textContent=change;items.appendChild(li);} version.textContent=`HUSHWATER v${publicVersion} · UPDATE LOG`; log.classList.remove('hidden'); document.getElementById('updateLogClose').onclick=()=>{localStorage.setItem('hushwater.lastSeenVersion',v);log.classList.add('hidden');}; } }).catch(() => {});
   api.getUpdateStatus?.().then(status => { if (status && status.state && status.state !== 'idle') applyUpdateStatus(status); }).catch(() => {});
   check.addEventListener('click', () => api.checkForUpdates().catch(() => {}));
   action.addEventListener('click', () => {
