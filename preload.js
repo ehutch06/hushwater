@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('hushwaterDesktop', {
   checkForUpdates: () => ipcRenderer.invoke('update-check'),
   getUpdateStatus: () => ipcRenderer.invoke('update-status-current'),
   downloadUpdate: () => ipcRenderer.invoke('update-download'),
+  updateAndRestart: () => ipcRenderer.invoke('update-and-restart'),
   installUpdate: () => ipcRenderer.invoke('update-install'),
   onUpdateStatus: cb => ipcRenderer.on('update-status', (_event, data) => cb(data))
 });
