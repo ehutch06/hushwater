@@ -4,6 +4,7 @@ const { autoUpdater } = require('electron-updater');
 
 let mainWindow;
 let lastUpdateStatus = { state: 'idle' };
+let installAfterDownload = false;
 
 function send(channel, payload) {
   if (channel === 'update-status') lastUpdateStatus = payload;
@@ -45,12 +46,29 @@ app.whenReady().then(() => {
   autoUpdater.on('update-available', info => send('update-status', { state: 'available', version: info.version }));
   autoUpdater.on('update-not-available', () => send('update-status', { state: 'current' }));
   autoUpdater.on('download-progress', p => send('update-status', { state: 'downloading', percent: Math.round(p.percent) }));
-  autoUpdater.on('update-downloaded', info => send('update-status', { state: 'ready', version: info.version }));
+  autoUpdater.on('update-downloaded', info => {
+    if (installAfterDownload) {
+      send('update-status', { state: 'installing', version: info.version });
+      setTimeout(() => autoUpdater.quitAndInstall(false, true), 350);
+      return;
+    }
+    send('update-status', { state: 'ready', version: info.version });
+  });
   autoUpdater.on('error', err => send('update-status', { state: 'error', message: err.message }));
 
   ipcMain.handle('update-check', () => autoUpdater.checkForUpdates());
   ipcMain.handle('update-status-current', () => lastUpdateStatus);
   ipcMain.handle('update-download', () => autoUpdater.downloadUpdate());
+  ipcMain.handle('update-and-restart', async () => {
+    installAfterDownload = true;
+    send('update-status', { state: 'starting' });
+    try {
+      return await autoUpdater.downloadUpdate();
+    } catch (err) {
+      installAfterDownload = false;
+      throw err;
+    }
+  });
   ipcMain.handle('update-install', () => autoUpdater.quitAndInstall(false, true));
   ipcMain.handle('app-version', () => app.getVersion());
 
